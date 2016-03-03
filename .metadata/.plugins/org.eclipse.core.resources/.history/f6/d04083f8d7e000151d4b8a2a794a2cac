@@ -1,0 +1,40 @@
+import java.util.Objects;
+/*
+ * 
+ */
+public class Movement {
+	  final double time;
+	  final double str;
+	  Movement(double time, double str) {
+		  this.time=time;
+		  this.str=str;
+	  }
+	  
+	  public double getTime() {
+		  return time;
+	  }
+	  
+	  public double getStr() {
+		  return str;
+	  }
+	  
+	  @Override
+	  public boolean equals(Object obj) {
+	      if (obj == null) {
+	          return false;
+	      }
+	      if (!Movement.class.isAssignableFrom(obj.getClass())) {
+	          return false;
+	      }
+	      final Movement other = (Movement) obj;
+	      if ((this.time != other.time) || (this.str != other.str)) {
+	          return false;
+	      }
+	      return true;
+	  }
+	  
+	  @Override
+	  public int hashCode(){
+	      return 11 * Objects.hashCode(time) + 13 * Objects.hashCode(str) + 17;
+	  }
+}

@@ -1,0 +1,58 @@
+import java.util.Objects;
+/*
+ * Movement object
+ * @version 2016_03_02
+ * @author Jennifer Hunter
+ */
+public class Movement {
+	  final double time;
+	  final double str;
+	  Movement(double time, double str) {
+		  this.time=time;
+		  this.str=str;
+	  }
+	  
+	  /*
+	   * @returns the time of the movement
+	   */
+	  public double getTime() {
+		  return time;
+	  }
+	  
+	  /*
+	   * @returns the strength of the movement (G-Force)
+	   */
+	  public double getStr() {
+		  return str;
+	  }
+	  
+	  /*
+	   * Determines if two movement objects are equal
+	   * (non-Javadoc)
+	   * @see java.lang.Object#equals(java.lang.Object)
+	   */
+	  @Override
+	  public boolean equals(Object obj) {
+	      if (obj == null) {
+	          return false;
+	      }
+	      if (!Movement.class.isAssignableFrom(obj.getClass())) {
+	          return false;
+	      }
+	      final Movement other = (Movement) obj;
+	      if ((this.time != other.time) || (this.str != other.str)) {
+	          return false;
+	      }
+	      return true;
+	  }
+	  
+	  /*
+	   * Computes a hashcode for a movement object
+	   * (non-Javadoc)
+	   * @see java.lang.Object#hashCode()
+	   */
+	  @Override
+	  public int hashCode(){
+	      return 11 * Objects.hashCode(time) + 13 * Objects.hashCode(str) + 17;
+	  }
+}
