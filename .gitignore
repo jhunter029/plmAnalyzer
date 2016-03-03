@@ -6,7 +6,10 @@
 .metadata/.log
 *.prefs
 .metadata/.plugins/org.eclipse.jdt.core/savedIndexNames.txt
-*.ini
-.metadata/.plugins/org.eclipse.jdt.core/savedIndexNames.txt
 *.index
-.metadata/.log
+.metadata/.plugins/org.eclipse.jdt.core/350859473.index
+*.markers
+*.resources
+.metadata/.plugins/org.eclipse.e4.workbench/workbench.xmi
+.metadata/.plugins/org.eclipse.jdt.core/externalLibsTimeStamps
+*.properties
