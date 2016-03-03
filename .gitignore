@@ -1,0 +1,8 @@
+*.log
+.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.jdt.ui.prefs
+*.lock
+.metadata/.plugins/org.eclipse.jdt.core/savedIndexNames.txt
+*.ini
+.metadata/.log
+*.prefs
+.metadata/.plugins/org.eclipse.jdt.core/savedIndexNames.txt
