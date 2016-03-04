@@ -2,6 +2,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Random;
 
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
@@ -50,7 +51,7 @@ public class Main extends Application {
 	private DoubleProperty eph = new SimpleDoubleProperty();
 	// Menus
 	private Menu file, monitor, display, paramSetup,
-		reports, aols, trim, about;
+		reports, trim, about;
 	// Button for leg movement analysis
 	private Button analyze;
 	// Data retrieved from csv
@@ -89,7 +90,7 @@ public class Main extends Application {
 	    xAxis.setAutoRanging(true);
 	    yAxis.setAutoRanging(true);
 	    // Format x-axis to handle dates
-	    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	    //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	
 	    //Create the line chart
 	    LineChart<String, Number> chartPost = new LineChart<>(new CategoryAxis(), new NumberAxis());
@@ -175,12 +176,18 @@ public class Main extends Application {
 	    Slider slider = new Slider();
 	    slider.setMin(0);
 	    slider.setMax(100);
-	    slider.setValue(40);
-	    slider.setShowTickLabels(false);
+	    slider.setValue(0);
+	    //slider.setShowTickLabels(false);
 	    slider.setShowTickMarks(true);
-	    slider.setMajorTickUnit(50);
+	    slider.setMajorTickUnit(25);
 	    slider.setMinorTickCount(5);
-	    slider.setBlockIncrement(10);
+	    slider.setBlockIncrement(5);
+	    // Change the chart view when the slider is moved
+	    slider.valueProperty().addListener((
+            ObservableValue<? extends Number> ov, 
+            Number old_val, Number new_val) -> {
+                
+        });
 	    
 	    // Create a borderpane to hold all GUI objects
 	    BorderPane borderpane = new BorderPane();
@@ -189,7 +196,7 @@ public class Main extends Application {
 	    MenuBar menuBar = new MenuBar();
 	    setupMenu();
 	    menuBar.getMenus().addAll(file, monitor, display, paramSetup,
-	    		reports, aols, trim, about);
+	    		reports, trim, about);
 	    
 	    // Create a vertical box to show the charts
 	    VBox content = new VBox();
@@ -243,11 +250,6 @@ public class Main extends Application {
 	
 	    reports = new Menu("Reports");
 	    setupReports();
-	
-	    aols = new Menu("Aols");
-	    aols.setOnAction(e -> {
-	    	}
-	    );
 	    
 	    trim = new Menu("Trim");
 	    trim.setOnAction(e -> {
@@ -452,17 +454,18 @@ public class Main extends Application {
 		  data = new ArrayList<IndexPair>();
 		  Date sample = new Date();
 		  long timeTest = sample.getTime();
-		  data.add(new IndexPair(sample,2));
-		  sample.setTime(timeTest + 5000);
-		  data.add(new IndexPair(sample,5));
-		  sample.setTime(timeTest + 10000);
-		  data.add(new IndexPair(sample,3));
-		  sample.setTime(timeTest + 15000);
-		  data.add(new IndexPair(sample,4));
-		  sample.setTime(timeTest + 20000);
-		  data.add(new IndexPair(sample,3));
-		  sample.setTime(timeTest + 25000);
-		  data.add(new IndexPair(sample,1));
+		  
+		  for (int i = 0; i < 15; i++) {
+			  // Update sample time
+			  sample.setTime(timeTest);
+			  // Generate random force
+			  Random ran = new Random(); 
+			  int rand = ran.nextInt(7);
+			  // Add the new data point
+			  data.add(new IndexPair(sample, rand));
+			  // Increment the time variable
+			  timeTest += 5000;
+		  }
 	  }
 	  
 	  private class IndexPair {
