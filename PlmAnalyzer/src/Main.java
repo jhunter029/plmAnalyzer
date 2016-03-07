@@ -1,3 +1,6 @@
+
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -9,13 +12,9 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.chart.BarChart;
-import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -35,7 +34,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 
@@ -56,7 +54,8 @@ public class Main extends Application {
 	private Button analyze;
 	// Data retrieved from csv
 	private ArrayList<IndexPair> data;
-	
+	// How many data points can be seen at a screen at once
+	private int screenCapacity = 10;
 	    
 	/**
 	* Method to start the GUI
@@ -81,45 +80,51 @@ public class Main extends Application {
 	    extractData();
 	    
 	    // Adjusted Line Chart
-	    final CategoryAxis xAxis = new CategoryAxis();
-	    final NumberAxis yAxis = new NumberAxis(0, 7, 1);
+	    DateAxis xAxis = new DateAxis();
+	    NumberAxis yAxis = new NumberAxis(0, 7, 1);
 	    // Name the axes
 	    xAxis.setLabel("Time");
 	    yAxis.setLabel("Force (g)");
 	    // Format the axes
 	    xAxis.setAutoRanging(true);
 	    yAxis.setAutoRanging(true);
-	    // Format x-axis to handle dates
-	    //SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	
 	    //Create the line chart
-	    LineChart<String, Number> chartPost = new LineChart<>(new CategoryAxis(), new NumberAxis());
+	    LineChart<Date, Number> chartPost = new LineChart<Date, Number>(xAxis, yAxis);
 	    // Set chart title
 	    chartPost.setTitle("Leg Movement Analysis");
-	    //chartPost.setCreateSymbols(false); // hide datepoint symbols
+	    // Hide datepoint symbols
+	    chartPost.setCreateSymbols(false);
 	    // Hide the chart legend
 	    chartPost.setLegendVisible(false);
 	    // Create a series to add to the chart
-	    XYChart.Series<String, Number> adjusted = new XYChart.Series<String, Number>();
+	    XYChart.Series<Date, Number> adjusted = new XYChart.Series<Date, Number>();
 	
+	    // Create a threshold line
+	    XYChart.Series<Date, Number> threshold = new XYChart.Series<Date, Number>();
 	    // Populate the series with data
 	    for (int i = 0 ; i < data.size() ; i++) {
-	        adjusted.getData().add(new XYChart.Data<String, Number> (
+	        adjusted.getData().add(new XYChart.Data<Date, Number> (
 	        		data.get(i).getX(), data.get(i).getY()));
+	        threshold.getData().add(new XYChart.Data<Date, Number> (
+	        		data.get(i).getX(), 1));
 	    }
 	    
 	    // Change the data point text when the mouse is moved over the chart
 		chartPost.setOnMouseMoved(new EventHandler<MouseEvent>() {
 		      @Override public void handle(MouseEvent mouseEvent) {
-		    	  String x = xAxis.getValueForDisplay(mouseEvent.getX());
+		    	  Date x = xAxis.getValueForDisplay(mouseEvent.getX());
 		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY());
 		    	  //if (data.contains(new IndexPair(x, y))) {
-			          dataPoint.setText("Force: " + y + "; Time: " +x);
+		    	  SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
+			          dataPoint.setText("Force: " + numFormat.format(y)
+			          	+ "; Time: " + dateFormat.format(x));
 			       // }
 		      	}
 		});
 		// Add series to chart
-	    chartPost.getData().add(adjusted);
+	    chartPost.getData().addAll(adjusted, threshold);
 	    
 	    
 	    /*
@@ -175,7 +180,7 @@ public class Main extends Application {
 	    // Setup time slider
 	    Slider slider = new Slider();
 	    slider.setMin(0);
-	    slider.setMax(100);
+	    slider.setMax(data.size() - 1);
 	    slider.setValue(0);
 	    //slider.setShowTickLabels(false);
 	    slider.setShowTickMarks(true);
@@ -185,8 +190,13 @@ public class Main extends Application {
 	    // Change the chart view when the slider is moved
 	    slider.valueProperty().addListener((
             ObservableValue<? extends Number> ov, 
-            Number old_val, Number new_val) -> {
-                
+            Number oldVal, Number newVal) -> {
+            int up = (int) Math.round((double)newVal);
+            int low = (int) Math.round((double)newVal) - screenCapacity;
+            low = (low < 0)? 0 : low;
+            ((DateAxis)chartPost.getXAxis()).setUpperBound(data.get(up).getX());
+            ((DateAxis)chartPost.getXAxis()).setLowerBound(data.get(low).getX());
+
         });
 	    
 	    // Create a borderpane to hold all GUI objects
@@ -455,7 +465,7 @@ public class Main extends Application {
 		  Date sample = new Date();
 		  long timeTest = sample.getTime();
 		  
-		  for (int i = 0; i < 15; i++) {
+		  for (int i = 0; i < 50; i++) {
 			  // Update sample time
 			  sample.setTime(timeTest);
 			  // Generate random force
@@ -472,14 +482,13 @@ public class Main extends Application {
 		// Object for creating indexes in the chart
 		  final Date x;
 		  final double y;
-		  SimpleDateFormat dateF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		  IndexPair(Date x, double y) {
 			  this.x = new Date(x.getTime());
 			  this.y=y;
-			  }
+		  }
 		  
-		  public String getX() {
-			  return dateF.format(x);
+		  public Date getX() {
+			  return x;
 		  }
 		  
 		  public double getY() {
