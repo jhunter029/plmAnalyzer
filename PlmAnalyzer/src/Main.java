@@ -3,6 +3,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Random;
@@ -113,13 +114,21 @@ public class Main extends Application {
 	    // Change the data point text when the mouse is moved over the chart
 		chartPost.setOnMouseMoved(new EventHandler<MouseEvent>() {
 		      @Override public void handle(MouseEvent mouseEvent) {
+		    	  // The values were off by random amounts.
+		    	  // So, I hard-coded the adjustment values to make them correct.
+		    	  
+		    	  // Gets the x and y values of the chart under the mouse
 		    	  Date x = xAxis.getValueForDisplay(mouseEvent.getX());
-		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY());
-		    	  //if (data.contains(new IndexPair(x, y))) {
+		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY()) + 0.84;
+		    	  Calendar cal = Calendar.getInstance();
+		    	  cal.setTime(x);
+		    	  cal.add(Calendar.SECOND, -20);
+		    	  //Format the date to a prettier string
 		    	  SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
-			          dataPoint.setText("Force: " + numFormat.format(y)
-			          	+ "; Time: " + dateFormat.format(x));
+			      // Update the string on the top of the chart
+		    	  dataPoint.setText("Force: " + numFormat.format(y)
+			          	+ "; Time: " + dateFormat.format(cal.getTime()));
 			       // }
 		      	}
 		});
