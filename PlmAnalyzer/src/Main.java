@@ -26,8 +26,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
@@ -57,15 +55,17 @@ public class Main extends Application {
 	private ArrayList<IndexPair> data;
 	// How many data points can be seen at a screen at once
 	private int screenCapacity = 10;
+	// Format for dates on x-axis
+	private SimpleDateFormat dateFormat;
 	    
 	/**
 	* Method to start the GUI
 	*
 	* @param stage Stage for displaying
 	*/
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void start(Stage stage) {
-		
+		dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		// Create data point text
 		dataPoint = new Text ("Time: Datapoint: Amplitude:");
 		dataPoint.setTextAlignment(TextAlignment.CENTER);
@@ -124,7 +124,7 @@ public class Main extends Application {
 		    	  cal.setTime(x);
 		    	  cal.add(Calendar.SECOND, -20);
 		    	  //Format the date to a prettier string
-		    	  SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		    	  
 		    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
 			      // Update the string on the top of the chart
 		    	  dataPoint.setText("Force: " + numFormat.format(y)
@@ -134,36 +134,6 @@ public class Main extends Application {
 		});
 		// Add series to chart
 	    chartPost.getData().addAll(adjusted, threshold);
-	    
-	    
-	    /*
-	    // Create the table
-	    TableView<String> table = new TableView<String>();
-	    final ObservableList<String> tableList =
-	        FXCollections.observableArrayList(
-	            new String("Jacob"),
-	            new String("Isabella"),
-	            new String("Ethan"),
-	            new String("Emma"),
-	            new String("Michael")
-	        );
-	    
-	    // Don't allow users to edit values in the table
-	    table.setEditable(false);
-	    // Limit the columns to what is designated here
-	    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-	    // Limit the amount of rows
-	    table.setPrefHeight(75);
-	    
-	    TableColumn<String, String> ephCol = new TableColumn<String, String>
-	    ("Avg PLMs/Hour");
-	 
-        TableColumn<String, String> conclusionCol = new TableColumn<String, String>
-        (">25 PLMs/Hour?");
-	 
-	    table.setItems(tableList);
-	    table.getColumns().addAll(conclusionCol, ephCol);
-	     */
 	    
 	    // Set initial value of average to zero
 	    eph.set(0.0);
@@ -203,8 +173,14 @@ public class Main extends Application {
             int up = (int) Math.round((double)newVal);
             int low = (int) Math.round((double)newVal) - screenCapacity;
             low = (low < 0)? 0 : low;
-            ((DateAxis)chartPost.getXAxis()).setUpperBound(data.get(up).getX());
-            ((DateAxis)chartPost.getXAxis()).setLowerBound(data.get(low).getX());
+            Date upper = data.get(up).getX();
+            Date lower = data.get(low).getX();
+            // DEBUG PRINT STATEMENTS
+            System.out.println("Upper Bound: " + dateFormat.format(upper));
+            System.out.println("Lower Bound: " + dateFormat.format(lower));
+            // Set the upper and lower bounds of the chart
+            ((DateAxis)chartPost.getXAxis()).setUpperBound(upper);
+            ((DateAxis)chartPost.getXAxis()).setLowerBound(lower);
 
         });
 	    

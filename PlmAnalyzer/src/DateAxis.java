@@ -468,7 +468,7 @@ public final class DateAxis extends Axis<Date> {
                     break;
             }
         }*/
-        dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         return dateFormat.format(date);
     }
 
@@ -578,6 +578,7 @@ public final class DateAxis extends Axis<Date> {
      * @see #lowerBoundProperty()
      */
     public final void setLowerBound(Date date) {
+    	setAutoRanging(false);
         lowerBound.set(date);
     }
 
@@ -609,6 +610,7 @@ public final class DateAxis extends Axis<Date> {
      * @see #upperBoundProperty() ()
      */
     public final void setUpperBound(Date date) {
+    	setAutoRanging(false);
         upperBound.set(date);
     }
 
