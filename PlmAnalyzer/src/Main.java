@@ -1,4 +1,5 @@
 
+import java.io.File;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -19,6 +20,7 @@ import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChart.Data;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -32,6 +34,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -111,6 +115,8 @@ public class Main extends Application {
 	        		data.get(i).getX(), 1));
 	    }
 	    
+	   
+	    
 	    // Change the data point text when the mouse is moved over the chart
 		chartPost.setOnMouseMoved(new EventHandler<MouseEvent>() {
 		      @Override public void handle(MouseEvent mouseEvent) {
@@ -170,14 +176,24 @@ public class Main extends Application {
 	    slider.valueProperty().addListener((
             ObservableValue<? extends Number> ov, 
             Number oldVal, Number newVal) -> {
+            // the upper bound is the value of the slider
             int up = (int) Math.round((double)newVal);
+            // the lower bound is the slider value minus the screen capacity
             int low = (int) Math.round((double)newVal) - screenCapacity;
+            // If the lower bound is less than 0, set it to 0
             low = (low < 0)? 0 : low;
+            // If the lower bound is greater than max - screen capacity,
+            // set it equal to the max slider value - screen capacity
+            low = (low > data.size() - 1 - screenCapacity)? 
+            		data.size() - 1 - screenCapacity : low;
+            // If the upper bound, is less than the screen capacity,
+            // set it to the screen capacity
+            up = (up < screenCapacity)? screenCapacity : up;
+
+            // Get the date values for the bounds
             Date upper = data.get(up).getX();
             Date lower = data.get(low).getX();
-            // DEBUG PRINT STATEMENTS
-            System.out.println("Upper Bound: " + dateFormat.format(upper));
-            System.out.println("Lower Bound: " + dateFormat.format(lower));
+
             // Set the upper and lower bounds of the chart
             ((DateAxis)chartPost.getXAxis()).setUpperBound(upper);
             ((DateAxis)chartPost.getXAxis()).setLowerBound(lower);
@@ -189,7 +205,7 @@ public class Main extends Application {
 	    
 	    // Setup the top menu toolbar
 	    MenuBar menuBar = new MenuBar();
-	    setupMenu();
+	    setupMenu(stage);
 	    menuBar.getMenus().addAll(file, monitor, display, paramSetup,
 	    		reports, trim, about);
 	    
@@ -201,12 +217,13 @@ public class Main extends Application {
 	    content.getChildren().addAll(dataPoint, chartPost, slider, ephText, analyze);
 	    		//chartPre, table - elements to add
 	    // Give the bottom button some extra space
-	    VBox.setMargin(analyze, new Insets(0.0, 0.0, 20.0, 20.0));
+	    VBox.setMargin(analyze, new Insets(0.0, 0.0, 20.0, 0.0));
 	    
 	    // Add the menu to the top of the GUI
 	    borderpane.setTop(menuBar);
 	    // Anchor the content to the left
 	    borderpane.setCenter(content);
+	    BorderPane.setMargin(content, new Insets(0,50,0,15));
 	    
 	    ///DEBUG - change eph value
 	    eph.set(26.0);
@@ -226,11 +243,11 @@ public class Main extends Application {
 	/**
 	* Initialize Menus for the Menu Toolbar
 	*/
-	public void setupMenu() {
+	public void setupMenu(Stage stage) {
 	
 	    // Toolbar Menu creation
 	    file = new Menu("File");
-	    setupFile();
+	    setupFile(stage);
 	
 	    monitor = new Menu("Monitor");
 	    setupMonitor();
@@ -253,12 +270,14 @@ public class Main extends Application {
 	
 	    about = new Menu("About");
 	    about.setOnAction(e -> {
+	    	System.out.println("About was clicked.");
+	    	// Generate a dialog box with the about info
 	    	Alert alert = new Alert(AlertType.INFORMATION);
 	    	alert.setTitle("About");
 	    	alert.setHeaderText("About the PLM Analyzer");
 	    	alert.setContentText("Michael Alexander Haver, Jennifer Hunter, Robert Lee, Kevin Powell, and Joesph Thompson"
-	    			+ "design this PLM Analyzer for the Emory Sleep Lab. /n2016");
-	
+	    			+ "designed this PLM Analyzer for the Emory Sleep Lab. /n2016");
+	    	alert.initOwner(stage);
 	    	alert.showAndWait();
 	    	}
 	    );
@@ -270,11 +289,17 @@ public class Main extends Application {
 	/**
 	 * Initialize Menu Items for the File menu
 	 */
-	 public void setupFile() {
+	 public void setupFile(Stage stage) {
 		// Open
 		 MenuItem open = new MenuItem("Open");
 		 open.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
+				   FileChooser fileChooser = new FileChooser();
+				   fileChooser.setTitle("Open File");
+				   fileChooser.getExtensionFilters().addAll(
+			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
+			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
+				   fileChooser.showOpenDialog(stage);
 	  	     }
 		 });
 		 file.getItems().add(open);
@@ -284,6 +309,9 @@ public class Main extends Application {
 		 MenuItem saveAs = new MenuItem("Save As");
 		 saveAs.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
+				   FileChooser fileChooser1 = new FileChooser();
+				   fileChooser1.setTitle("Save As");
+				   File file = fileChooser1.showSaveDialog(stage);
 	  	     }
 		 });
 		 file.getItems().add(saveAs);
