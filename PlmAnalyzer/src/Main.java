@@ -1,23 +1,26 @@
+
+import java.io.File;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Objects;
+import java.util.Random;
 
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.chart.BarChart;
-import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChart.Data;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -25,16 +28,15 @@ import javafx.scene.control.Button;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 
@@ -50,21 +52,24 @@ public class Main extends Application {
 	private DoubleProperty eph = new SimpleDoubleProperty();
 	// Menus
 	private Menu file, monitor, display, paramSetup,
-		reports, aols, trim, about;
+		reports, trim, about;
 	// Button for leg movement analysis
 	private Button analyze;
 	// Data retrieved from csv
 	private ArrayList<IndexPair> data;
-	
+	// How many data points can be seen at a screen at once
+	private int screenCapacity = 10;
+	// Format for dates on x-axis
+	private SimpleDateFormat dateFormat;
 	    
 	/**
 	* Method to start the GUI
 	*
 	* @param stage Stage for displaying
 	*/
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void start(Stage stage) {
-		
+		dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		// Create data point text
 		dataPoint = new Text ("Time: Datapoint: Amplitude:");
 		dataPoint.setTextAlignment(TextAlignment.CENTER);
@@ -80,75 +85,61 @@ public class Main extends Application {
 	    extractData();
 	    
 	    // Adjusted Line Chart
-	    final CategoryAxis xAxis = new CategoryAxis();
-	    final NumberAxis yAxis = new NumberAxis(0, 7, 1);
+	    DateAxis xAxis = new DateAxis();
+	    NumberAxis yAxis = new NumberAxis(0, 7, 1);
 	    // Name the axes
 	    xAxis.setLabel("Time");
 	    yAxis.setLabel("Force (g)");
 	    // Format the axes
 	    xAxis.setAutoRanging(true);
 	    yAxis.setAutoRanging(true);
-	    // Format x-axis to handle dates
-	    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	
 	    //Create the line chart
-	    LineChart<String, Number> chartPost = new LineChart<>(new CategoryAxis(), new NumberAxis());
+	    LineChart<Date, Number> chartPost = new LineChart<Date, Number>(xAxis, yAxis);
 	    // Set chart title
 	    chartPost.setTitle("Leg Movement Analysis");
-	    //chartPost.setCreateSymbols(false); // hide datepoint symbols
+	    // Hide datepoint symbols
+	    chartPost.setCreateSymbols(false);
 	    // Hide the chart legend
 	    chartPost.setLegendVisible(false);
 	    // Create a series to add to the chart
-	    XYChart.Series<String, Number> adjusted = new XYChart.Series<String, Number>();
+	    XYChart.Series<Date, Number> adjusted = new XYChart.Series<Date, Number>();
 	
+	    // Create a threshold line
+	    XYChart.Series<Date, Number> threshold = new XYChart.Series<Date, Number>();
 	    // Populate the series with data
 	    for (int i = 0 ; i < data.size() ; i++) {
-	        adjusted.getData().add(new XYChart.Data<String, Number> (
+	        adjusted.getData().add(new XYChart.Data<Date, Number> (
 	        		data.get(i).getX(), data.get(i).getY()));
+	        threshold.getData().add(new XYChart.Data<Date, Number> (
+	        		data.get(i).getX(), 1));
 	    }
+	    
+	   
 	    
 	    // Change the data point text when the mouse is moved over the chart
 		chartPost.setOnMouseMoved(new EventHandler<MouseEvent>() {
 		      @Override public void handle(MouseEvent mouseEvent) {
-		    	  String x = xAxis.getValueForDisplay(mouseEvent.getX());
-		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY());
-		    	  //if (data.contains(new IndexPair(x, y))) {
-			          dataPoint.setText("Force: " + y + "; Time: " +x);
+		    	  // The values were off by random amounts.
+		    	  // So, I hard-coded the adjustment values to make them correct.
+		    	  
+		    	  // Gets the x and y values of the chart under the mouse
+		    	  Date x = xAxis.getValueForDisplay(mouseEvent.getX());
+		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY()) + 0.84;
+		    	  Calendar cal = Calendar.getInstance();
+		    	  cal.setTime(x);
+		    	  cal.add(Calendar.SECOND, -20);
+		    	  //Format the date to a prettier string
+		    	  
+		    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
+			      // Update the string on the top of the chart
+		    	  dataPoint.setText("Force: " + numFormat.format(y)
+			          	+ "; Time: " + dateFormat.format(cal.getTime()));
 			       // }
 		      	}
 		});
 		// Add series to chart
-	    chartPost.getData().add(adjusted);
-	    
-	    
-	    /*
-	    // Create the table
-	    TableView<String> table = new TableView<String>();
-	    final ObservableList<String> tableList =
-	        FXCollections.observableArrayList(
-	            new String("Jacob"),
-	            new String("Isabella"),
-	            new String("Ethan"),
-	            new String("Emma"),
-	            new String("Michael")
-	        );
-	    
-	    // Don't allow users to edit values in the table
-	    table.setEditable(false);
-	    // Limit the columns to what is designated here
-	    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-	    // Limit the amount of rows
-	    table.setPrefHeight(75);
-	    
-	    TableColumn<String, String> ephCol = new TableColumn<String, String>
-	    ("Avg PLMs/Hour");
-	 
-        TableColumn<String, String> conclusionCol = new TableColumn<String, String>
-        (">25 PLMs/Hour?");
-	 
-	    table.setItems(tableList);
-	    table.getColumns().addAll(conclusionCol, ephCol);
-	     */
+	    chartPost.getData().addAll(adjusted, threshold);
 	    
 	    // Set initial value of average to zero
 	    eph.set(0.0);
@@ -174,22 +165,49 @@ public class Main extends Application {
 	    // Setup time slider
 	    Slider slider = new Slider();
 	    slider.setMin(0);
-	    slider.setMax(100);
-	    slider.setValue(40);
-	    slider.setShowTickLabels(false);
+	    slider.setMax(data.size() - 1);
+	    slider.setValue(0);
+	    //slider.setShowTickLabels(false);
 	    slider.setShowTickMarks(true);
-	    slider.setMajorTickUnit(50);
+	    slider.setMajorTickUnit(25);
 	    slider.setMinorTickCount(5);
-	    slider.setBlockIncrement(10);
+	    slider.setBlockIncrement(5);
+	    // Change the chart view when the slider is moved
+	    slider.valueProperty().addListener((
+            ObservableValue<? extends Number> ov, 
+            Number oldVal, Number newVal) -> {
+            // the upper bound is the value of the slider
+            int up = (int) Math.round((double)newVal);
+            // the lower bound is the slider value minus the screen capacity
+            int low = (int) Math.round((double)newVal) - screenCapacity;
+            // If the lower bound is less than 0, set it to 0
+            low = (low < 0)? 0 : low;
+            // If the lower bound is greater than max - screen capacity,
+            // set it equal to the max slider value - screen capacity
+            low = (low > data.size() - 1 - screenCapacity)? 
+            		data.size() - 1 - screenCapacity : low;
+            // If the upper bound, is less than the screen capacity,
+            // set it to the screen capacity
+            up = (up < screenCapacity)? screenCapacity : up;
+
+            // Get the date values for the bounds
+            Date upper = data.get(up).getX();
+            Date lower = data.get(low).getX();
+
+            // Set the upper and lower bounds of the chart
+            ((DateAxis)chartPost.getXAxis()).setUpperBound(upper);
+            ((DateAxis)chartPost.getXAxis()).setLowerBound(lower);
+
+        });
 	    
 	    // Create a borderpane to hold all GUI objects
 	    BorderPane borderpane = new BorderPane();
 	    
 	    // Setup the top menu toolbar
 	    MenuBar menuBar = new MenuBar();
-	    setupMenu();
+	    setupMenu(stage);
 	    menuBar.getMenus().addAll(file, monitor, display, paramSetup,
-	    		reports, aols, trim, about);
+	    		reports, trim, about);
 	    
 	    // Create a vertical box to show the charts
 	    VBox content = new VBox();
@@ -199,12 +217,13 @@ public class Main extends Application {
 	    content.getChildren().addAll(dataPoint, chartPost, slider, ephText, analyze);
 	    		//chartPre, table - elements to add
 	    // Give the bottom button some extra space
-	    VBox.setMargin(analyze, new Insets(0.0, 0.0, 20.0, 20.0));
+	    VBox.setMargin(analyze, new Insets(0.0, 0.0, 20.0, 0.0));
 	    
 	    // Add the menu to the top of the GUI
 	    borderpane.setTop(menuBar);
 	    // Anchor the content to the left
 	    borderpane.setCenter(content);
+	    BorderPane.setMargin(content, new Insets(0,50,0,15));
 	    
 	    ///DEBUG - change eph value
 	    eph.set(26.0);
@@ -224,11 +243,11 @@ public class Main extends Application {
 	/**
 	* Initialize Menus for the Menu Toolbar
 	*/
-	public void setupMenu() {
+	public void setupMenu(Stage stage) {
 	
 	    // Toolbar Menu creation
 	    file = new Menu("File");
-	    setupFile();
+	    setupFile(stage);
 	
 	    monitor = new Menu("Monitor");
 	    setupMonitor();
@@ -243,11 +262,6 @@ public class Main extends Application {
 	
 	    reports = new Menu("Reports");
 	    setupReports();
-	
-	    aols = new Menu("Aols");
-	    aols.setOnAction(e -> {
-	    	}
-	    );
 	    
 	    trim = new Menu("Trim");
 	    trim.setOnAction(e -> {
@@ -256,12 +270,14 @@ public class Main extends Application {
 	
 	    about = new Menu("About");
 	    about.setOnAction(e -> {
+	    	System.out.println("About was clicked.");
+	    	// Generate a dialog box with the about info
 	    	Alert alert = new Alert(AlertType.INFORMATION);
 	    	alert.setTitle("About");
 	    	alert.setHeaderText("About the PLM Analyzer");
 	    	alert.setContentText("Michael Alexander Haver, Jennifer Hunter, Robert Lee, Kevin Powell, and Joesph Thompson"
-	    			+ "design this PLM Analyzer for the Emory Sleep Lab. /n2016");
-	
+	    			+ "designed this PLM Analyzer for the Emory Sleep Lab. /n2016");
+	    	alert.initOwner(stage);
 	    	alert.showAndWait();
 	    	}
 	    );
@@ -273,11 +289,17 @@ public class Main extends Application {
 	/**
 	 * Initialize Menu Items for the File menu
 	 */
-	 public void setupFile() {
+	 public void setupFile(Stage stage) {
 		// Open
 		 MenuItem open = new MenuItem("Open");
 		 open.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
+				   FileChooser fileChooser = new FileChooser();
+				   fileChooser.setTitle("Open File");
+				   fileChooser.getExtensionFilters().addAll(
+			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
+			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
+				   fileChooser.showOpenDialog(stage);
 	  	     }
 		 });
 		 file.getItems().add(open);
@@ -287,6 +309,9 @@ public class Main extends Application {
 		 MenuItem saveAs = new MenuItem("Save As");
 		 saveAs.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
+				   FileChooser fileChooser1 = new FileChooser();
+				   fileChooser1.setTitle("Save As");
+				   File file = fileChooser1.showSaveDialog(stage);
 	  	     }
 		 });
 		 file.getItems().add(saveAs);
@@ -452,31 +477,31 @@ public class Main extends Application {
 		  data = new ArrayList<IndexPair>();
 		  Date sample = new Date();
 		  long timeTest = sample.getTime();
-		  data.add(new IndexPair(sample,2));
-		  sample.setTime(timeTest + 5000);
-		  data.add(new IndexPair(sample,5));
-		  sample.setTime(timeTest + 10000);
-		  data.add(new IndexPair(sample,3));
-		  sample.setTime(timeTest + 15000);
-		  data.add(new IndexPair(sample,4));
-		  sample.setTime(timeTest + 20000);
-		  data.add(new IndexPair(sample,3));
-		  sample.setTime(timeTest + 25000);
-		  data.add(new IndexPair(sample,1));
+		  
+		  for (int i = 0; i < 50; i++) {
+			  // Update sample time
+			  sample.setTime(timeTest);
+			  // Generate random force
+			  Random ran = new Random(); 
+			  int rand = ran.nextInt(7);
+			  // Add the new data point
+			  data.add(new IndexPair(sample, rand));
+			  // Increment the time variable
+			  timeTest += 5000;
+		  }
 	  }
 	  
 	  private class IndexPair {
 		// Object for creating indexes in the chart
 		  final Date x;
 		  final double y;
-		  SimpleDateFormat dateF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		  IndexPair(Date x, double y) {
 			  this.x = new Date(x.getTime());
 			  this.y=y;
-			  }
+		  }
 		  
-		  public String getX() {
-			  return dateF.format(x);
+		  public Date getX() {
+			  return x;
 		  }
 		  
 		  public double getY() {

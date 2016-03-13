@@ -1,15 +1,58 @@
-*.log
-.metadata/.plugins/org.eclipse.core.runtime/.settings/org.eclipse.jdt.ui.prefs
-*.lock
-.metadata/.plugins/org.eclipse.jdt.core/savedIndexNames.txt
-*.ini
-.metadata/.log
-*.prefs
-.metadata/.plugins/org.eclipse.jdt.core/savedIndexNames.txt
-*.index
-.metadata/.plugins/org.eclipse.jdt.core/350859473.index
-*.markers
-*.resources
-.metadata/.plugins/org.eclipse.e4.workbench/workbench.xmi
-.metadata/.plugins/org.eclipse.jdt.core/externalLibsTimeStamps
-*.properties
+
+# Created by https://www.gitignore.io/api/eclipse
+
+### Eclipse ###
+
+.metadata
+bin/
+tmp/
+plugins/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+
+# Eclipse Core
+.project
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# PyDev specific (Python IDE for Eclipse)
+*.pydevproject
+
+# CDT-specific (C/C++ Development Tooling)
+.cproject
+
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
+
+# Java annotation processor (APT)
+.factorypath
+
+# PDT-specific (PHP Development Tools)
+.buildpath
+
+# sbteclipse plugin
+.target
+
+# Tern plugin
+.tern-project
+
+# TeXlipse plugin
+.texlipse
+
+# STS (Spring Tool Suite)
+.springBeans
+
+# Code Recommenders
+.recommenders/
+
+# Generated class files
+*.class
