@@ -18,4 +18,8 @@
 	</section>
 	<section name="ImportExportAction">
 	</section>
+	<section name="ZipFileImportWizard">
+	</section>
+	<section name="FileSystemImportWizard">
+	</section>
 </section>

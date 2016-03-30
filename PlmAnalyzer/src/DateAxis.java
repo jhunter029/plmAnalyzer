@@ -79,6 +79,7 @@ import java.util.*;
  * @author Christian Schudt
  * @author Diego Cirujano
  */
+@SuppressWarnings("restriction")
 public final class DateAxis extends Axis<Date> {
 
     /**
