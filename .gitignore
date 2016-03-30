@@ -56,3 +56,5 @@ local.properties
 
 # Generated class files
 *.class
+*.class
+*.index

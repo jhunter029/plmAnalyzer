@@ -2,30 +2,30 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item value="false" key="isRegEx"/>
-		<item value="about" key="selection"/>
+		<item value="" key="selection"/>
 		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
-		<item value="true" key="wrap"/>
+		<item value="false" key="wrap"/>
 		<item value="false" key="wholeword"/>
 		<list key="findhistory">
+			<item value="exportData"/>
+			<item value="export"/>
+			<item value="chartPost"/>
+			<item value="date"/>
+			<item value="event"/>
+			<item value=" value.set(Integer.parseInt(date[0] + date[1] + date[2] + date[3]),"/>
 			<item value="about"/>
 			<item value="isAutoRanging"/>
-			<item value="autoR"/>
-			<item value="lowerbound"/>
-			<item value="getLower"/>
-			<item value="Date"/>
-			<item value="update"/>
-			<item value="SimpleDate"/>
 		</list>
 		<list key="replacehistory">
+			<item value="chart"/>
+			<item value="value"/>
 			<item value=""/>
 			<item value="Calendar"/>
 			<item value="str"/>
 			<item value="time"/>
 			<item value="Movement"/>
 			<item value=")"/>
-			<item value="("/>
-			<item value="String"/>
 		</list>
 	</section>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
