@@ -161,7 +161,7 @@ public class Main extends Application {
 	             // Change the text color depending on if the criteria is met
 	             try {
 	            	 double val = (double) newVal;
-	            	 if (val < 25.0) {
+	            	 if (val < 5.0) {
 	            		 ephText.setFill(Color.BLACK);
 	            	 } else {
 	            		 ephText.setFill(Color.RED);
