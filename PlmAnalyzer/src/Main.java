@@ -9,7 +9,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Objects;
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -21,7 +20,6 @@ import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.scene.chart.XYChart.Data;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -40,6 +38,9 @@ import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 
 /*
  * GUI for PLM Analyzer system
@@ -57,8 +58,10 @@ public class Main extends Application {
 		reports, trim, about;
 	// Button for leg movement analysis
 	private Button analyze;
+	// Threshold value
+	private double thresholdValue = 1.0;
 	// Data retrieved from csv
-	private ArrayList<IndexPair> data;
+	private ArrayList<XYChart.Data<Date, Number>> data;
 	// How many data points can be seen at a screen at once
 	private int screenCapacity = 10;
 	// Format for dates on x-axis
@@ -75,7 +78,7 @@ public class Main extends Application {
 	*/
 	@SuppressWarnings({ "unchecked", "rawtypes"})
 	public void start(Stage stage) {
-		data = new ArrayList<IndexPair>();
+		data = new ArrayList<XYChart.Data<Date, Number>>();
 		dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		// Create data point text
 		dataPoint = new Text ("Time: Datapoint: Amplitude:");
@@ -139,10 +142,14 @@ public class Main extends Application {
 
 		// Create a series to add to the chart
 	    adjusted = new XYChart.Series<Date, Number>();
+	    adjusted.getData().add(new XYChart.Data(new Date(), 0.0));
+
 	    // Create a threshold line
 	    threshold = new XYChart.Series<Date, Number>();
-	
-	    chart.getData().setAll(adjusted, threshold);
+	    adjusted.getData().add(new XYChart.Data(new Date(), 1.0));
+	    
+	    chart.getData().retainAll(adjusted, threshold);
+	    chart.getData().addAll(adjusted, threshold);
 	    
 	    // Set initial value of average to zero
 	    eph.set(0.0);
@@ -196,8 +203,8 @@ public class Main extends Application {
 		            up = (up < screenCapacity)? screenCapacity : up;
 		
 		            // Get the date values for the bounds
-		            Date upper = data.get(up).getX();
-		            Date lower = data.get(low).getX();
+		            Date upper = data.get(up).getXValue();
+		            Date lower = data.get(low).getXValue();
 		
 		            // Set the upper and lower bounds of the chart
 		            ((DateAxis)chart.getXAxis()).setUpperBound(upper);
@@ -263,13 +270,14 @@ public class Main extends Application {
 	* Populate the Chart with a new series
 	*/
 	public void popChart() {
-	    // Populate the series with data
+		// Create the threshold line
+		ArrayList<XYChart.Data<Date, Number>> threshData = new ArrayList<XYChart.Data<Date, Number>>();
 	    for (int i = 0 ; i < data.size() ; i++) {
-	        adjusted.getData().add(new XYChart.Data<Date, Number> (
-	        		data.get(i).getX(), data.get(i).getY()));
-	        threshold.getData().add(new XYChart.Data<Date, Number> (
-	        		data.get(i).getX(), 1));
+	        threshData.add(new XYChart.Data<Date, Number> (
+	        		data.get(i).getXValue(), thresholdValue));
 	    }
+	    adjusted.getData().setAll(data);
+	    threshold.getData().setAll(threshData);
 	}
 	/**
 	* Initialize Menus for the Menu Toolbar
@@ -339,9 +347,13 @@ public class Main extends Application {
 				   extractData(openFile);
 				   // Populate the chart
 				   popChart();
+				   // Print out data for DEBUGGING
+				   System.out.println(adjusted.getData());
+				   System.out.println(threshold.getData());
 	  	     }
 		 });
 		 file.getItems().add(open);
+		 open.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
 		 
 		//Setup Ctrl+O to activate open
 		 
@@ -356,7 +368,7 @@ public class Main extends Application {
 	  	     }
 		 });
 		 file.getItems().add(saveAs);
-		 
+		 saveAs.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
 		// Save Raw Data
 		 MenuItem saveRaw = new MenuItem("Save Raw Data");
 		 saveRaw.setOnAction(new EventHandler<ActionEvent>() {
@@ -530,7 +542,7 @@ public class Main extends Application {
 	                new BufferedReader(fileReader);
 
 	            while((line = bufferedReader.readLine()) != null) {
-	                // YYYY-MM-DD hh:mm:ss.sss accx accy accz gyrx gyry gyrz
+	                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
 	                // 01234567890123456789012345678901234567890123456789012
 	                
 	                String[] value = line.split("");
@@ -540,6 +552,7 @@ public class Main extends Application {
 	                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
 	                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
 	                		Integer.parseInt(value[17] + value[18]));
+	                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
 	                // Parse the accelerometer and gyroscope values
 	                double ax = Double.parseDouble(value[24] + value[25] + value[26] + value[27]);
 	                double ay = Double.parseDouble(value[29] + value[30] + value[31] + value[32]);
@@ -550,7 +563,7 @@ public class Main extends Application {
 	                // Get the magnitudes for the accelerometer and gyroscope
 	                double accel = Math.sqrt(ax*ax + ay*ay + az*az);
 	                double gyro = Math.sqrt(gx*gx + gy*gy + gz*gz);
-	                data.add(new IndexPair(event.getTime(), accel));
+	                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
 	            }   
 
 	            // Always close files.
@@ -565,45 +578,7 @@ public class Main extends Application {
 	                + dataFile.getName() + "'");
 	      }
 	  }
-	  
-	  private class IndexPair {
-		// Object for creating indexes in the chart
-		  final Date x;
-		  final double y;
-		  IndexPair(Date x, double y) {
-			  this.x = new Date(x.getTime());
-			  this.y=y;
-		  }
-		  
-		  public Date getX() {
-			  return x;
-		  }
-		  
-		  public double getY() {
-			  return y;
-		  }
-		  
-		  @Override
-		  public boolean equals(Object obj) {
-		      if (obj == null) {
-		          return false;
-		      }
-		      if (!IndexPair.class.isAssignableFrom(obj.getClass())) {
-		          return false;
-		      }
-		      final IndexPair other = (IndexPair) obj;
-		      if ((this.x != other.x) || (this.y != other.y)) {
-		          return false;
-		      }
-		      return true;
-		  }
-		  
-		  @Override
-		  public int hashCode(){
-		      return 11 * Objects.hashCode(x) + 13 * Objects.hashCode(y) + 17;
-		  }
-	  }
-    
+
 	//JavaFX applications use the main method to launch the GUI.
 	//It should only ever contain the call to the launch method
     public static void main(String[] args) {
