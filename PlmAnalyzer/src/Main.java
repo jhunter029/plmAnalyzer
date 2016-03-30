@@ -44,7 +44,7 @@ import javafx.scene.input.KeyCombination;
 
 /*
  * GUI for PLM Analyzer system
- * @version 2016_03_02
+ * @version 2016_03_30
  * @author Jennifer Hunter
  */
 @SuppressWarnings("restriction")
@@ -58,7 +58,7 @@ public class Main extends Application {
 		reports, trim, about;
 	// Button for leg movement analysis
 	private Button analyze;
-	// Threshold value
+	// Threshold value - default to 1.0
 	private double thresholdValue = 1.0;
 	// Data retrieved from csv
 	private ArrayList<XYChart.Data<Date, Number>> data;
@@ -270,13 +270,15 @@ public class Main extends Application {
 	* Populate the Chart with a new series
 	*/
 	public void popChart() {
-		// Create the threshold line
+		// Create the threshold values
 		ArrayList<XYChart.Data<Date, Number>> threshData = new ArrayList<XYChart.Data<Date, Number>>();
 	    for (int i = 0 ; i < data.size() ; i++) {
 	        threshData.add(new XYChart.Data<Date, Number> (
 	        		data.get(i).getXValue(), thresholdValue));
 	    }
+	    // Add the data values from the imported file into the adjusted series
 	    adjusted.getData().setAll(data);
+	    // Add the data values for the threshold into the threshold series
 	    threshold.getData().setAll(threshData);
 	}
 	/**
@@ -384,14 +386,6 @@ public class Main extends Application {
 	  	     }
 		 });
 		 file.getItems().add(fileInfo);
-		 
-		// Print
-		 MenuItem print = new MenuItem("Print");
-		 print.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
-	  	     }
-		 });
-		 file.getItems().add(print);
 		 
 		 // Exit
 		 MenuItem exit = new MenuItem("Exit");
