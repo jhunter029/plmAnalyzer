@@ -51,6 +51,7 @@ import javafx.scene.layout.StackPane;
 
 /*
  * GUI for PLM Analyzer system
+ * @version 2016_04_02
  * @author Jennifer Hunter
  */
 @SuppressWarnings("restriction")
@@ -225,7 +226,7 @@ public class Main extends Application {
 	    menuBar.getMenus().addAll(file, monitor, display, paramSetup,
 	    		reports, trim, about);
 	    
-	    // Create a vertical box to show the charts
+	    // Create a vertical box to show the chartsc3
 	    VBox content = new VBox();
 	    // Add spacing between the children
 	    content.setSpacing(15.0);
@@ -339,33 +340,20 @@ public class Main extends Application {
 						//    @Override public void run() {
 						  //          Platform.runLater(new Runnable() {
 						  //              @Override public void run() {             
-						                	// Extract the data from the csv
-											extractData(openFile);
-						            		// Print out data for DEBUGGING
-						 				    System.out.println(chart.getData().get(0).getData());
-						 				    // Reset chart view
-						 				    chart.applyCss();
-						 				    chart.layout();
-						 				    chart.getXAxis().layout();
-						 				    chart.getYAxis().layout();
-						 				    chart.getXAxis().requestAxisLayout();
-						 				    chart.getYAxis().requestAxisLayout();
-						 				    /*
-						 				    for (int i = 0; i < chart.getData().get(0).getData().size(); i++) {
-						 				    	System.out.println(chart.getXAxis().getDisplayPosition(data.get(i).getXValue()));	
-						 				    	System.out.println(chart.getXAxis().getDisplayPosition(data.get(i).getXValue()));
-						 				    }
-						 				    */
-						 				    
-				   }
+	                	// Extract the data from the csv
+						extractData(openFile);
+	            		// Print out data for DEBUGGING
+	 				    System.out.println(chart.getData().get(0).getData());
+	 				    // Reset chart view
+	 				    chart.applyCss();
+	 				    chart.layout();
+	 				    chart.getXAxis().layout();
+	 				    chart.getYAxis().layout();
+	 				    chart.getXAxis().requestAxisLayout();
+	 				    chart.getYAxis().requestAxisLayout();						 				    
+				   	}
 			   }}
-			   );
-				   /*
-						            });
-						    }});
-				   }
-	  	     }
-		 */
+		);
 		 
 		 
 		 // Add the open menu item under the file menu
