@@ -34,7 +34,6 @@
 <fullyQualifiedTypeName name="java.util.Objects"/>
 <fullyQualifiedTypeName name="java.util.HashSet"/>
 <fullyQualifiedTypeName name="java.util.ArrayList"/>
-<fullyQualifiedTypeName name="java.util.Date"/>
 <fullyQualifiedTypeName name="javafx.beans.property.DoubleProperty"/>
 <fullyQualifiedTypeName name="javafx.beans.property.SimpleDoubleProperty"/>
 <fullyQualifiedTypeName name="javafx.beans.value.ChangeListener"/>
@@ -46,7 +45,6 @@
 <fullyQualifiedTypeName name="java.text.DecimalFormat"/>
 <fullyQualifiedTypeName name="java.text.NumberFormat"/>
 <fullyQualifiedTypeName name="java.util.Calendar"/>
-<fullyQualifiedTypeName name="javafx.scene.chart.XYChart.Data"/>
 <fullyQualifiedTypeName name="javafx.stage.FileChooser"/>
 <fullyQualifiedTypeName name="java.io.File"/>
 <fullyQualifiedTypeName name="javafx.stage.Modality"/>
@@ -56,4 +54,9 @@
 <fullyQualifiedTypeName name="java.io.IOException"/>
 <fullyQualifiedTypeName name="org.w3c.dom.Node"/>
 <fullyQualifiedTypeName name="javax.xml.soap.Node"/>
+<fullyQualifiedTypeName name="javafx.scene.chart.XYChart.Data"/>
+<fullyQualifiedTypeName name="javax.xml.crypto.Data"/>
+<fullyQualifiedTypeName name="java.util.Date"/>
+<fullyQualifiedTypeName name="java.util.Observable"/>
+<fullyQualifiedTypeName name="javafx.scene.chart.XYChart.Series"/>
 </qualifiedTypeNameHistroy>

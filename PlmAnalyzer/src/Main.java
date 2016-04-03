@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+
+//import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -17,9 +19,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -41,10 +44,13 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.collections.*;
+import javafx.scene.*;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 
 /*
  * GUI for PLM Analyzer system
- * @version 2016_03_30
  * @author Jennifer Hunter
  */
 @SuppressWarnings("restriction")
@@ -61,15 +67,15 @@ public class Main extends Application {
 	// Threshold value - default to 1.0
 	private double thresholdValue = 1.0;
 	// Data retrieved from csv
-	private ArrayList<XYChart.Data<Date, Number>> data;
+	private ObservableList <LineChart.Data<Date, Number>> data;
 	// How many data points can be seen at a screen at once
 	private int screenCapacity = 10;
 	// Format for dates on x-axis
 	private SimpleDateFormat dateFormat;
 	// Reference to the line chart and its series
-	private LineChart<Date, Number> chart;
-	private XYChart.Series<Date, Number> adjusted ;
-	private XYChart.Series<Date, Number> threshold;
+	private LineChartWithMarkers chart;
+	
+	//private XYChart.Series<Date, Number> threshold;
 	    
 	/**
 	* Method to start the GUI
@@ -78,7 +84,9 @@ public class Main extends Application {
 	*/
 	@SuppressWarnings({ "unchecked", "rawtypes"})
 	public void start(Stage stage) {
-		data = new ArrayList<XYChart.Data<Date, Number>>();
+		// Store the raw data points in an observable array list
+		data = FXCollections.observableArrayList();
+		// Date Format Year-Month-Day Hour(24):Minute:Second.Milliseconds
 		dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		// Create data point text
 		dataPoint = new Text ("Time: Datapoint: Amplitude:");
@@ -91,18 +99,20 @@ public class Main extends Application {
 	        }
 	    );    
 	    
-	    // Adjusted Line Chart
+	    // Define the axes
 	    DateAxis xAxis = new DateAxis();
 	    NumberAxis yAxis = new NumberAxis(0, 7, 1);
+	    
 	    // Name the axes
 	    xAxis.setLabel("Time");
 	    yAxis.setLabel("Force (g)");
+	    
 	    // Format the axes
 	    xAxis.setAutoRanging(true);
 	    yAxis.setAutoRanging(true);
 	
 	    //Create the line chart
-	    chart = new LineChart<Date, Number>(xAxis, yAxis);
+	    chart = new LineChartWithMarkers(xAxis, yAxis);
 	    // Set chart title
 	    chart.setTitle("Leg Movement Analysis");
 	    // Hide datepoint symbols
@@ -111,6 +121,8 @@ public class Main extends Application {
 	    chart.setLegendVisible(false); 
 	    // Make the horizontal grid lines visible for easier reference
 	    chart.setHorizontalGridLinesVisible(true);
+	    // Turn off animation
+	    chart.setAnimated(false);
 	    
 	    // Change the data point text when the mouse is moved over the chart
 		chart.setOnMouseMoved(new EventHandler<MouseEvent>() {
@@ -121,35 +133,27 @@ public class Main extends Application {
 		    	  final double shiftX = xSceneShift(chartPlotBackground);
 		    	  final double shiftY = ySceneShift(chartPlotBackground);
 		    	  // Gets the x and y values of the chart under the mouse
-		    	  Date x = xAxis.getValueForDisplay(mouseEvent.getX() - shiftX);
-		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY() - shiftY) - 1.38;
+		    	  Date x = xAxis.getValueForDisplay(mouseEvent.getX() - shiftX + 55);
+		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY() - shiftY + 55);		    	  
 		    	  
-		    	  /*
-		    	  // Create a Calendar instance in order to adjust mouse event value
-		    	  Calendar cal = Calendar.getInstance();
-		    	  cal.setTime(x);
-		    	  cal.add(Calendar.SECOND, -20);
-		    	  */
-		    	  
-		    	  //Format the date to a prettier string
+		    	  //Format the number to a prettier string
 		    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
-			      // Update the string on the top of the chart
+			      // Update the string label on the top of the chart
 		    	  dataPoint.setText("Force: " + numFormat.format(y)
 			          	+ "; Time: " + dateFormat.format(x));
 		      	}
 		});
-		
 
-		// Create a series to add to the chart
-	    adjusted = new XYChart.Series<Date, Number>();
-	    adjusted.getData().add(new XYChart.Data(new Date(), 0.0));
+	    // Add a horizontal marker as a threshold
+	    XYChart.Data<Date, Number> horizontalMarker = new XYChart.Data<Date, Number>(new Date(), thresholdValue);
+        chart.addHorizontalValueMarker(horizontalMarker);
+        
+        // Add a series based off the data
+        chart.getData().add(new LineChart.Series<Date, Number>("RawData", data));
 
-	    // Create a threshold line
-	    threshold = new XYChart.Series<Date, Number>();
-	    adjusted.getData().add(new XYChart.Data(new Date(), 1.0));
-	    
-	    chart.getData().retainAll(adjusted, threshold);
-	    chart.getData().addAll(adjusted, threshold);
+	    // Change the cursor to a crosshair when on the chart
+	    chart.setCursor(Cursor.CROSSHAIR);
+	   
 	    
 	    // Set initial value of average to zero
 	    eph.set(0.0);
@@ -266,21 +270,7 @@ public class Main extends Application {
 	    return node.getParent() == null ? 0 : node.getBoundsInParent().getMinY() + ySceneShift(node.getParent());
 	}
 	
-	/**
-	* Populate the Chart with a new series
-	*/
-	public void popChart() {
-		// Create the threshold values
-		ArrayList<XYChart.Data<Date, Number>> threshData = new ArrayList<XYChart.Data<Date, Number>>();
-	    for (int i = 0 ; i < data.size() ; i++) {
-	        threshData.add(new XYChart.Data<Date, Number> (
-	        		data.get(i).getXValue(), thresholdValue));
-	    }
-	    // Add the data values from the imported file into the adjusted series
-	    adjusted.getData().setAll(data);
-	    // Add the data values for the threshold into the threshold series
-	    threshold.getData().setAll(threshData);
-	}
+	
 	/**
 	* Initialize Menus for the Menu Toolbar
 	*/
@@ -344,20 +334,44 @@ public class Main extends Application {
 			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
 			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
 				   File openFile =  fileChooser.showOpenDialog(stage);
-				   
-				   // Extract the data from the csv
-				   extractData(openFile);
-				   // Populate the chart
-				   popChart();
-				   // Print out data for DEBUGGING
-				   System.out.println(adjusted.getData());
-				   System.out.println(threshold.getData());
+				   if (openFile != null && openFile.exists()) {
+					  // Platform.runLater(new Runnable() {
+						//    @Override public void run() {
+						  //          Platform.runLater(new Runnable() {
+						  //              @Override public void run() {             
+						                	// Extract the data from the csv
+											extractData(openFile);
+						            		// Print out data for DEBUGGING
+						 				    System.out.println(chart.getData().get(0).getData());
+						 				    // Reset chart view
+						 				    chart.applyCss();
+						 				    chart.layout();
+						 				    chart.getXAxis().layout();
+						 				    chart.getYAxis().layout();
+						 				    chart.getXAxis().requestAxisLayout();
+						 				    chart.getYAxis().requestAxisLayout();
+						 				    /*
+						 				    for (int i = 0; i < chart.getData().get(0).getData().size(); i++) {
+						 				    	System.out.println(chart.getXAxis().getDisplayPosition(data.get(i).getXValue()));	
+						 				    	System.out.println(chart.getXAxis().getDisplayPosition(data.get(i).getXValue()));
+						 				    }
+						 				    */
+						 				    
+				   }
+			   }}
+			   );
+				   /*
+						            });
+						    }});
+				   }
 	  	     }
-		 });
-		 file.getItems().add(open);
-		 open.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
+		 */
 		 
-		//Setup Ctrl+O to activate open
+		 
+		 // Add the open menu item under the file menu
+		 file.getItems().add(open);
+		 //Setup Ctrl+O to activate open
+		 open.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
 		 
 		// Save As
 		 MenuItem saveAs = new MenuItem("Save As");
@@ -571,6 +585,67 @@ public class Main extends Application {
 	                "Error reading file '" 
 	                + dataFile.getName() + "'");
 	      }
+	  }
+	  
+
+	  /** @return plotted y values for monotonically increasing integer x values, starting from x=1 */
+	  public ObservableList<XYChart.Data<Integer, Integer>> plot(int... y) {
+	    final ObservableList<XYChart.Data<Integer, Integer>> dataset = FXCollections.observableArrayList();
+	    int i = 0;
+	    while (i < y.length) {
+	      final XYChart.Data<Integer, Integer> data = new XYChart.Data<>(i + 1, y[i]);
+	      data.setNode(
+	          new HoveredThresholdNode(
+	              (i == 0) ? 0 : y[i-1],
+	              y[i]
+	          )
+	      );
+
+	      dataset.add(data);
+	      i++;
+	    }
+
+	    return dataset;
+	  }
+
+	  /** a node which displays a value on hover, but is otherwise empty */
+	  class HoveredThresholdNode extends StackPane {
+	    HoveredThresholdNode(int priorValue, int value) {
+	      setPrefSize(15, 15);
+
+	      final Label label = createDataThresholdLabel(priorValue, value);
+
+	      setOnMouseEntered(new EventHandler<MouseEvent>() {
+	        @Override public void handle(MouseEvent mouseEvent) {
+	          getChildren().setAll(label);
+	          setCursor(Cursor.NONE);
+	          toFront();
+	        }
+	      });
+	      setOnMouseExited(new EventHandler<MouseEvent>() {
+	        @Override public void handle(MouseEvent mouseEvent) {
+	          getChildren().clear();
+	          setCursor(Cursor.CROSSHAIR);
+	        }
+	      });
+	    }
+
+	    private Label createDataThresholdLabel(int priorValue, int value) {
+	      final Label label = new Label(value + "");
+	      label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
+	      label.setStyle("-fx-font-size: 20; -fx-font-weight: bold;");
+
+	      if (priorValue == 0) {
+	        label.setTextFill(Color.DARKGRAY);
+	      } else if (value > priorValue) {
+	        label.setTextFill(Color.FORESTGREEN);
+	      } else {
+	        label.setTextFill(Color.FIREBRICK);
+	      }
+
+	      label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
+	      return label;
+	    }
 	  }
 
 	//JavaFX applications use the main method to launch the GUI.
