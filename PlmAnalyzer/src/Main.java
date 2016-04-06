@@ -62,7 +62,7 @@ public class Main extends Application {
 	// Average PLM events per hour 
 	private DoubleProperty eph = new SimpleDoubleProperty();
 	// Menus
-	private Menu file, display, paramSetup,
+	private Menu file, paramSetup,
 		reports, about;
 
 	// Threshold value - default to 1.0
@@ -169,8 +169,7 @@ public class Main extends Application {
 	    // Setup the top menu toolbar
 	    MenuBar menuBar = new MenuBar();
 	    setupMenu(stage);
-	    menuBar.getMenus().addAll(file, display, paramSetup,
-	    		reports, about);
+	    menuBar.getMenus().addAll(file, paramSetup, reports, about);
 	    
 	    // Add spacing between the children
 	    content.setSpacing(15.0);
@@ -209,11 +208,6 @@ public class Main extends Application {
 	    // Toolbar Menu creation
 	    file = new Menu("File");
 	    setupFile(stage);
-	
-	    display = new Menu("Display");
-	    display.setOnAction(e -> {
-	        }
-	    );
 	
 	    paramSetup = new Menu("Parameter Setup");
 	    setupParamSetup();
@@ -406,22 +400,19 @@ public class Main extends Application {
 	  	     }
 		 });
 		 file.getItems().add(saveAs);
+		 // Ctrl + S to save the analysis movement list to a file
 		 saveAs.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-		// Save Raw Data
-		 MenuItem saveRaw = new MenuItem("Save Raw Data");
-		 saveRaw.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
-	  	     }
-		 });
-		 file.getItems().add(saveRaw);
 		 
-		// File Information
-		 MenuItem fileInfo = new MenuItem("File Information");
-		 fileInfo.setOnAction(new EventHandler<ActionEvent>() {
+		 
+		 // Import Analysis
+		 MenuItem importAnalysis = new MenuItem("Import Analysis File");
+		 importAnalysis.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
 	  	     }
 		 });
-		 file.getItems().add(fileInfo);
+		 file.getItems().add(importAnalysis);
+		 // Ctrl + I to open the import
+		 importAnalysis.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN));
 		 
 		 // Exit
 		 MenuItem exit = new MenuItem("Exit");
@@ -432,21 +423,13 @@ public class Main extends Application {
 		 });
 		 file.getItems().add(exit);
 		 //Setup Ctrl+Q to activate exit
+		 exit.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
 	 }
 	
 	  /**
 	   * Initialize Menu Items for the paramSetup menu
 	   */
 	public void setupParamSetup() {
-	  	 // Preprocess
-	  	 MenuItem preprocess = new MenuItem("Preprocess");
-	  	 preprocess.setOnAction(new EventHandler<ActionEvent>() {
-	  		   public void handle(ActionEvent t) {
-	    	     }
-	  	 });
-	  	 paramSetup.getItems().add(preprocess);
-	  	 //Setup Ctrl+P to activate preprocess
-	  	 
 	  	 // Set PLM Paramters
 	  	 MenuItem setPLM = new MenuItem("Set PLM Paramters");
 	  	 setPLM.setOnAction(new EventHandler<ActionEvent>() {
@@ -454,24 +437,18 @@ public class Main extends Application {
 	  	     }
 	  	 });
 	  	 paramSetup.getItems().add(setPLM);
-	  	 //Setup Ctrl+K to activate setPLM
+	  	 //Setup Ctrl+P to activate setPLM
+	  	 setPLM.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
 	  	 
-	  	 // PLM Analysis
-	  	 MenuItem plmAnalysis = new MenuItem("PLM Analysis");
-	  	 plmAnalysis.setOnAction(new EventHandler<ActionEvent>() {
+	  	 // Display Paramters
+	  	 MenuItem disp = new MenuItem("Set Display Paramters");
+	  	 disp.setOnAction(new EventHandler<ActionEvent>() {
 	  	     public void handle(ActionEvent t) {
 	  	     }
 	  	 });
-	  	 paramSetup.getItems().add(plmAnalysis);
-	  	 //Setup Ctrl+M to activate plmAnalysis
-	  	 
-	  	 // Paramter Sets
-	  	 MenuItem paramSets = new MenuItem("Parameter Sets");
-	  	 paramSets.setOnAction(new EventHandler<ActionEvent>() {
-	  		   public void handle(ActionEvent t) {
-	    	     }
-	  	 });
-	  	 paramSetup.getItems().add(paramSets);
+	  	 paramSetup.getItems().add(disp);
+	  	 //Setup Ctrl+D to activate display parameters
+	  	 disp.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
 	   }
 	   
    /**
@@ -493,33 +470,13 @@ public class Main extends Application {
 	   	     }
 	   	 });
 	   	 reports.getItems().add(summaries);
-	   	 
-	   	 // PLM Episodes
-	   	 MenuItem plmEpisodes = new MenuItem("PLM Episodes");
-	   	 plmEpisodes.setOnAction(new EventHandler<ActionEvent>() {
-	   		   public void handle(ActionEvent t) {
-	     	     }
-	   	 });
-	   	 reports.getItems().add(plmEpisodes);
-	   	 
-	   	 // Verify Events
-	   	 MenuItem verify = new MenuItem("Verify Events");
-	   	 verify.setOnAction(new EventHandler<ActionEvent>() {
-	   		   public void handle(ActionEvent t) {
-	     	     }
-	   	 });
-	   	 reports.getItems().add(verify);
-	    }
-	  
+	}
 	  
 	 /**
 	  * Extract the accelerometer data from the device's csv file
 	 * @param dataFile 
 	  */
 	  public void extractData(File dataFile) {
-		  // Extract data with file i/o shiz
-		  // For now just put random numbers
-
 	      // This will reference one line at a time
 	      String line = null;
 
