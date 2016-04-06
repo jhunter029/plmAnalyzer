@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+
+//import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -17,9 +19,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -36,15 +39,20 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.collections.*;
+import javafx.scene.*;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 
 /*
  * GUI for PLM Analyzer system
- * @version 2016_03_02
+ * @version 2016_04_06
  * @author Jennifer Hunter
  */
 @SuppressWarnings("restriction")
@@ -54,22 +62,30 @@ public class Main extends Application {
 	// Average PLM events per hour 
 	private DoubleProperty eph = new SimpleDoubleProperty();
 	// Menus
-	private Menu file, monitor, display, paramSetup,
-		reports, trim, about;
-	// Button for leg movement analysis
-	private Button analyze;
-	// Threshold value
+	private Menu file, display, paramSetup,
+		reports, about;
+
+	// Threshold value - default to 1.0
 	private double thresholdValue = 1.0;
 	// Data retrieved from csv
-	private ArrayList<XYChart.Data<Date, Number>> data;
-	// How many data points can be seen at a screen at once
-	private int screenCapacity = 10;
+	private ObservableList <LineChart.Data<Date, Number>> data;
+	// How many data points can be seen at a screen at once - default = 5.0
+	private int screenCapacity = 5;
 	// Format for dates on x-axis
 	private SimpleDateFormat dateFormat;
 	// Reference to the line chart and its series
-	private LineChart<Date, Number> chart;
-	private XYChart.Series<Date, Number> adjusted ;
-	private XYChart.Series<Date, Number> threshold;
+	private LineChartWithMarkers chart;
+	// Reference to the Axes
+	private DateAxis xAxis;
+	private NumberAxis yAxis;
+	// Reference to the slider GUI object
+	private Slider slider;
+	// Vertical Box for holding content
+	private VBox content;
+	// Reference to the borderpane
+	private BorderPane borderpane;
+	
+	//private XYChart.Series<Date, Number> threshold;
 	    
 	/**
 	* Method to start the GUI
@@ -78,31 +94,33 @@ public class Main extends Application {
 	*/
 	@SuppressWarnings({ "unchecked", "rawtypes"})
 	public void start(Stage stage) {
-		data = new ArrayList<XYChart.Data<Date, Number>>();
+		// Store the raw data points in an observable array list
+		data = FXCollections.observableArrayList();
+		
+		// Create a vertical box to show the chartsc3
+	    content = new VBox();
+	    
+		// Date Format Year-Month-Day Hour(24):Minute:Second.Milliseconds
 		dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		// Create data point text
-		dataPoint = new Text ("Time: Datapoint: Amplitude:");
+		dataPoint = new Text ("Force: ; Time: ");
 		dataPoint.setTextAlignment(TextAlignment.CENTER);
-		dataPoint.setTextOrigin(VPos.CENTER);
-	
-		// Analyze Button Creation
-	    analyze = new Button("Find and Analyze Leg Movements");
-	    analyze.setOnAction(e -> {
-	        }
-	    );    
+		dataPoint.setTextOrigin(VPos.CENTER);   
 	    
-	    // Adjusted Line Chart
-	    DateAxis xAxis = new DateAxis();
-	    NumberAxis yAxis = new NumberAxis(0, 7, 1);
+	    // Define the axes
+	    xAxis = new DateAxis();
+	    yAxis = new NumberAxis(0, 7, 1);
+	    
 	    // Name the axes
 	    xAxis.setLabel("Time");
 	    yAxis.setLabel("Force (g)");
+	    
 	    // Format the axes
 	    xAxis.setAutoRanging(true);
 	    yAxis.setAutoRanging(true);
 	
 	    //Create the line chart
-	    chart = new LineChart<Date, Number>(xAxis, yAxis);
+	    chart = new LineChartWithMarkers(xAxis, yAxis);
 	    // Set chart title
 	    chart.setTitle("Leg Movement Analysis");
 	    // Hide datepoint symbols
@@ -111,45 +129,11 @@ public class Main extends Application {
 	    chart.setLegendVisible(false); 
 	    // Make the horizontal grid lines visible for easier reference
 	    chart.setHorizontalGridLinesVisible(true);
-	    
-	    // Change the data point text when the mouse is moved over the chart
-		chart.setOnMouseMoved(new EventHandler<MouseEvent>() {
-		      @Override public void handle(MouseEvent mouseEvent) {
-		    	  // The values were off by random amounts.
-		    	  // So, I had to calculate the shift in the chart for the scene
-		    	  Node chartPlotBackground = chart.lookup(".chart-plot-background");
-		    	  final double shiftX = xSceneShift(chartPlotBackground);
-		    	  final double shiftY = ySceneShift(chartPlotBackground);
-		    	  // Gets the x and y values of the chart under the mouse
-		    	  Date x = xAxis.getValueForDisplay(mouseEvent.getX() - shiftX);
-		    	  double y = (double) yAxis.getValueForDisplay(mouseEvent.getY() - shiftY) - 1.38;
-		    	  
-		    	  /*
-		    	  // Create a Calendar instance in order to adjust mouse event value
-		    	  Calendar cal = Calendar.getInstance();
-		    	  cal.setTime(x);
-		    	  cal.add(Calendar.SECOND, -20);
-		    	  */
-		    	  
-		    	  //Format the date to a prettier string
-		    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
-			      // Update the string on the top of the chart
-		    	  dataPoint.setText("Force: " + numFormat.format(y)
-			          	+ "; Time: " + dateFormat.format(x));
-		      	}
-		});
-		
-
-		// Create a series to add to the chart
-	    adjusted = new XYChart.Series<Date, Number>();
-	    adjusted.getData().add(new XYChart.Data(new Date(), 0.0));
-
-	    // Create a threshold line
-	    threshold = new XYChart.Series<Date, Number>();
-	    adjusted.getData().add(new XYChart.Data(new Date(), 1.0));
-	    
-	    chart.getData().retainAll(adjusted, threshold);
-	    chart.getData().addAll(adjusted, threshold);
+	    // Turn off animation
+	    chart.setAnimated(false);
+	    // Change the cursor to a crosshair when on the chart
+	    chart.setCursor(Cursor.CROSSHAIR);
+	   
 	    
 	    // Set initial value of average to zero
 	    eph.set(0.0);
@@ -173,68 +157,33 @@ public class Main extends Application {
 	      });
 	    
 	    // Setup time slider
-	    Slider slider = new Slider();
+	    slider = new Slider();
 	    slider.setMin(0);
-	    int max = data.size() == 0? 0: data.size() - 1;
-	    slider.setMax(max);
+	    slider.setMax(0);
 	    slider.setValue(0);
-	    //slider.setShowTickLabels(false);
 	    slider.setShowTickMarks(true);
-	    slider.setMajorTickUnit(25);
-	    slider.setMinorTickCount(5);
-	    slider.setBlockIncrement(5);
-	    // Change the chart view when the slider is moved
-	    slider.valueProperty().addListener((
-            ObservableValue<? extends Number> ov, 
-            Number oldVal, Number newVal) -> {
-            	if (data.size() > 0) {
-		            // the upper bound is the value of the slider
-		            int up = (int) Math.round((double)newVal);
-		            // the lower bound is the slider value minus the screen capacity
-		            int low = (int) Math.round((double)newVal) - screenCapacity;
-		            // If the lower bound is less than 0, set it to 0
-		            low = (low < 0)? 0 : low;
-		            // If the lower bound is greater than max - screen capacity,
-		            // set it equal to the max slider value - screen capacity
-		            low = (low > max - screenCapacity)? 
-		            		max - screenCapacity : low;
-		            // If the upper bound, is less than the screen capacity,
-		            // set it to the screen capacity
-		            up = (up < screenCapacity)? screenCapacity : up;
-		
-		            // Get the date values for the bounds
-		            Date upper = data.get(up).getXValue();
-		            Date lower = data.get(low).getXValue();
-		
-		            // Set the upper and lower bounds of the chart
-		            ((DateAxis)chart.getXAxis()).setUpperBound(upper);
-		            ((DateAxis)chart.getXAxis()).setLowerBound(lower);
-            	}
-        });
-	    
+
 	    // Create a borderpane to hold all GUI objects
-	    BorderPane borderpane = new BorderPane();
+	    borderpane = new BorderPane();
 	    
 	    // Setup the top menu toolbar
 	    MenuBar menuBar = new MenuBar();
 	    setupMenu(stage);
-	    menuBar.getMenus().addAll(file, monitor, display, paramSetup,
-	    		reports, trim, about);
+	    menuBar.getMenus().addAll(file, display, paramSetup,
+	    		reports, about);
 	    
-	    // Create a vertical box to show the charts
-	    VBox content = new VBox();
 	    // Add spacing between the children
 	    content.setSpacing(15.0);
 	    // Add the dataPoint text, the charts, the slider, the table, and the analyze button
-	    content.getChildren().addAll(dataPoint, chart, slider, ephText, analyze);
-	    		//chartPre, table - elements to add
-	    // Give the bottom button some extra space
-	    VBox.setMargin(analyze, new Insets(0.0, 0.0, 20.0, 0.0));
+	    content.getChildren().addAll(dataPoint, ephText, chart);
 	    
 	    // Add the menu to the top of the GUI
 	    borderpane.setTop(menuBar);
+	    // Anchor the slider to the bottom
+	    borderpane.setBottom(slider);
 	    // Anchor the content to the left
 	    borderpane.setCenter(content);
+	    // Add extra space around the content
 	    BorderPane.setMargin(content, new Insets(0,50,0,15));
 	    
 	    ///DEBUG - change eph value
@@ -252,33 +201,6 @@ public class Main extends Application {
 	    stage.show();
 	}
 	
-	/*
-	 * Calculate the X shift cause by the scene for a given Javafx Node
-	 */
-	private double xSceneShift(Node node) {
-	    return node.getParent() == null ? 0 : node.getBoundsInParent().getMinX() + xSceneShift(node.getParent());
-	}
-
-	/*
-	 * Calculate the Y shift cause by the scene for a given Javafx Node
-	 */
-	private double ySceneShift(Node node) {
-	    return node.getParent() == null ? 0 : node.getBoundsInParent().getMinY() + ySceneShift(node.getParent());
-	}
-	
-	/**
-	* Populate the Chart with a new series
-	*/
-	public void popChart() {
-		// Create the threshold line
-		ArrayList<XYChart.Data<Date, Number>> threshData = new ArrayList<XYChart.Data<Date, Number>>();
-	    for (int i = 0 ; i < data.size() ; i++) {
-	        threshData.add(new XYChart.Data<Date, Number> (
-	        		data.get(i).getXValue(), thresholdValue));
-	    }
-	    adjusted.getData().setAll(data);
-	    threshold.getData().setAll(threshData);
-	}
 	/**
 	* Initialize Menus for the Menu Toolbar
 	*/
@@ -287,9 +209,6 @@ public class Main extends Application {
 	    // Toolbar Menu creation
 	    file = new Menu("File");
 	    setupFile(stage);
-	
-	    monitor = new Menu("Monitor");
-	    setupMonitor();
 	
 	    display = new Menu("Display");
 	    display.setOnAction(e -> {
@@ -301,11 +220,6 @@ public class Main extends Application {
 	
 	    reports = new Menu("Reports");
 	    setupReports();
-	    
-	    trim = new Menu("Trim");
-	    trim.setOnAction(e -> {
-	    	}
-	    );
 	
 	    about = new Menu("About");
 	    about.setOnAction(e -> {
@@ -321,9 +235,6 @@ public class Main extends Application {
 	    	}
 	    	
 	    );
-	    
-	    // start with sort by date in focus
-	    analyze.requestFocus();
 	}
 	
 	/**
@@ -333,7 +244,8 @@ public class Main extends Application {
 		// Open
 		 MenuItem open = new MenuItem("Open");
 		 open.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
+			   @SuppressWarnings({ "unchecked"})
+			public void handle(ActionEvent t) {
 				   // Open a file choose dialog to decide which file to open
 				   FileChooser fileChooser = new FileChooser();
 				   fileChooser.setTitle("Open File");
@@ -342,20 +254,146 @@ public class Main extends Application {
 			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
 			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
 				   File openFile =  fileChooser.showOpenDialog(stage);
-				   
-				   // Extract the data from the csv
-				   extractData(openFile);
-				   // Populate the chart
-				   popChart();
-				   // Print out data for DEBUGGING
-				   System.out.println(adjusted.getData());
-				   System.out.println(threshold.getData());
-	  	     }
-		 });
-		 file.getItems().add(open);
-		 open.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
+				   if (openFile != null && openFile.exists()) { 
+					   // Remove the old chart and slider from the GUI
+					   content.getChildren().remove(chart);
+					   borderpane.getChildren().remove(slider);
+	                	// Extract the data from the csv
+						extractData(openFile);
+						// Define the axes
+					    xAxis = new DateAxis();
+					    yAxis = new NumberAxis(0, 7, 1);
+					    
+					    // Name the axes
+					    xAxis.setLabel("Time");
+					    yAxis.setLabel("Force (g)");
+					    
+					    // Format the axes
+					    xAxis.setAutoRanging(true);
+					    yAxis.setAutoRanging(true);
+					    
+						//Create the line chart
+					    chart = new LineChartWithMarkers(xAxis, yAxis);
+					    // Set chart title
+					    chart.setTitle("Leg Movement Analysis");
+					    // Set node ID
+					    chart.setId("chart");
+					    // Hide datepoint symbols
+					    chart.setCreateSymbols(false);
+					    // Hide the chart legend
+					    chart.setLegendVisible(false); 
+					    // Make the horizontal grid lines visible for easier reference
+					    chart.setHorizontalGridLinesVisible(true);
+					    // Turn off animation
+					    chart.setAnimated(false);
+					    
+					    // Change the data point text when the mouse is moved over the chart
+						chart.setOnMouseMoved(new EventHandler<MouseEvent>() {
+						      @Override public void handle(MouseEvent mouseEvent) {
+						    	  // Create a 2D point for where the mouse is located in the scene
+						    	  Point2D pointInScene = new Point2D(mouseEvent.getSceneX(), mouseEvent.getSceneY());
+						    	  // Calculate what that 2D x-value corresponds to in reference to the x-axis
+						    	  double xPosInAxis = xAxis.sceneToLocal(new Point2D(pointInScene.getX(), 0)).getX();
+						    	  // Calculate what that 2D x-y-value corresponds to in reference to the y-axis
+						    	  double yPosInAxis = yAxis.sceneToLocal(new Point2D(0, pointInScene.getY())).getY();
+						    	  // Get the chart values corresponding to the values at the axes
+						    	  Date x = xAxis.getValueForDisplay(xPosInAxis);
+						    	  double y = yAxis.getValueForDisplay(yPosInAxis).doubleValue();
+						    	    
+						    	  //Format the number to a prettier string
+						    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
+							      // Update the string label on the top of the chart
+						    	  dataPoint.setText("Force: " + numFormat.format(y)
+							          	+ "; Time: " + dateFormat.format(x));
+						      	}
+						});
+
+					    // Add a horizontal marker as a threshold
+					    XYChart.Data<Date, Number> horizontalMarker = new XYChart.Data<Date, Number>(new Date(), thresholdValue);
+				        chart.addHorizontalValueMarker(horizontalMarker);
+				        
+				        // Add a series based off the data
+				        chart.getData().add(new LineChart.Series<Date, Number>("RawData", data));
+
+					    // Change the cursor to a crosshair when on the chart
+					    chart.setCursor(Cursor.CROSSHAIR);	
+					    
+					    // Setup time slider
+					    slider = new Slider();
+					    slider.setMin(0);
+					    slider.setValue(0);
+					    slider.setShowTickMarks(true);
+					    slider.setMajorTickUnit(10);
+					    slider.setMinorTickCount(5);
+					    slider.setBlockIncrement(5);
+					    
+	            		if (chart != null) {
+		            		LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) chart.getData().get(0);
+		            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+		            		// Set the max slider value of the slider
+		            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+		            		slider.setMax(max);
+	            		}
+	            		
+					    // Change the chart view when the slider is moved
+					    slider.valueProperty().addListener((
+				            ObservableValue<? extends Number> ov, 
+				            Number oldVal, Number newVal) -> {
+				            	if (data.size() > 0) {
+				            		// Get an updated reference of the chart on the graph
+				            		LineChart<Date,Number> c = (LineChart<Date,Number>) content.lookup("#chart");
+				            		if (c != null) {
+					            		LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) c.getData().get(0);
+					            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+					            		// Set the max slider value of the slider
+					            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+					            		slider.setMax(max);
+					            		slider.setMin(0);
+					            		
+					            		slider.setFocusTraversable(true);
+					            		
+							            // the upper bound is the value of the slider
+							            int up = (int) Math.round((double)newVal);
+							            // the lower bound is the slider value minus the screen capacity
+							            int low = (int) Math.round((double)newVal) - screenCapacity;
+							            // If the lower bound is less than 0, set it to 0
+							            low = (low < 0)? 0 : low;
+							            // If the lower bound is greater than max - screen capacity,
+							            // set it equal to the max slider value - screen capacity
+							            low = (low > max - screenCapacity)? 
+							            		max - screenCapacity : low;
+							            // If the upper bound, is less than the screen capacity,
+							            // set it to the screen capacity
+							            up = (up < screenCapacity)? screenCapacity : up;
+							
+							            // Get the date values for the bounds
+							            Date upper = chartData.get(up).getXValue();
+							            Date lower = chartData.get(low).getXValue();
+							
+							            // Set the upper and lower bounds of the chart
+							            ((DateAxis)c.getXAxis()).setUpperBound(upper);
+							            ((DateAxis)c.getXAxis()).setLowerBound(lower);
+							            
+							            
+				            		} else {
+				            			System.out.println("Chart is null.");
+				            			
+				            		}
+				            	}
+				        });
+					    
+					    // Add the new chart and slider to the GUI
+						content.getChildren().add(chart);
+						borderpane.setBottom(slider);
+				   	}
+			   }}
+		);
 		 
-		//Setup Ctrl+O to activate open
+		 
+		 // Add the open menu item under the file menu
+		 file.getItems().add(open);
+		 //Setup Ctrl+O to activate open
+		 open.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
 		 
 		// Save As
 		 MenuItem saveAs = new MenuItem("Save As");
@@ -385,14 +423,6 @@ public class Main extends Application {
 		 });
 		 file.getItems().add(fileInfo);
 		 
-		// Print
-		 MenuItem print = new MenuItem("Print");
-		 print.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
-	  	     }
-		 });
-		 file.getItems().add(print);
-		 
 		 // Exit
 		 MenuItem exit = new MenuItem("Exit");
 		 exit.setOnAction(new EventHandler<ActionEvent>() {
@@ -403,46 +433,7 @@ public class Main extends Application {
 		 file.getItems().add(exit);
 		 //Setup Ctrl+Q to activate exit
 	 }
-	 
-	 /**
-	  * Initialize Menu Items for the Monitor menu
-	  */
-	public void setupMonitor() {
-	 	 // Download
-	 	 MenuItem download = new MenuItem("Download");
-	 	 download.setOnAction(new EventHandler<ActionEvent>() {
-	 		   public void handle(ActionEvent t) {
-	   	     }
-	 	 });
-	 	 monitor.getItems().add(download);
-	 	 //Setup Ctrl+D to activate download
-	 	 
-	 	 // Initialize
-	 	 MenuItem initialize = new MenuItem("Initialize");
-	 	 initialize.setOnAction(new EventHandler<ActionEvent>() {
-	 	     public void handle(ActionEvent t) {
-	 	     }
-	 	 });
-	 	 monitor.getItems().add(initialize);
-	 	 //Setup Ctrl+I to activate initialize
-	 	 
-	 	 // Cable Test
-	 	 MenuItem cableTest = new MenuItem("Cable Test");
-	 	 cableTest.setOnAction(new EventHandler<ActionEvent>() {
-	 		   public void handle(ActionEvent t) {
-	   	     }
-	 	 });
-	 	 monitor.getItems().add(cableTest);
-	 	 
-	 	 // Comm Settings
-	 	 MenuItem commSettings = new MenuItem("Comm Settings");
-	 	 commSettings.setOnAction(new EventHandler<ActionEvent>() {
-	 		   public void handle(ActionEvent t) {
-	   	     }
-	 	 });
-	 	 monitor.getItems().add(commSettings);
-	  }
-	  
+	
 	  /**
 	   * Initialize Menu Items for the paramSetup menu
 	   */
@@ -577,6 +568,67 @@ public class Main extends Application {
 	                "Error reading file '" 
 	                + dataFile.getName() + "'");
 	      }
+	  }
+	  
+
+	  /** @return plotted y values for monotonically increasing integer x values, starting from x=1 */
+	  public ObservableList<XYChart.Data<Integer, Integer>> plot(int... y) {
+	    final ObservableList<XYChart.Data<Integer, Integer>> dataset = FXCollections.observableArrayList();
+	    int i = 0;
+	    while (i < y.length) {
+	      final XYChart.Data<Integer, Integer> data = new XYChart.Data<>(i + 1, y[i]);
+	      data.setNode(
+	          new HoveredThresholdNode(
+	              (i == 0) ? 0 : y[i-1],
+	              y[i]
+	          )
+	      );
+
+	      dataset.add(data);
+	      i++;
+	    }
+
+	    return dataset;
+	  }
+
+	  /** a node which displays a value on hover, but is otherwise empty */
+	  class HoveredThresholdNode extends StackPane {
+	    HoveredThresholdNode(int priorValue, int value) {
+	      setPrefSize(15, 15);
+
+	      final Label label = createDataThresholdLabel(priorValue, value);
+
+	      setOnMouseEntered(new EventHandler<MouseEvent>() {
+	        @Override public void handle(MouseEvent mouseEvent) {
+	          getChildren().setAll(label);
+	          setCursor(Cursor.NONE);
+	          toFront();
+	        }
+	      });
+	      setOnMouseExited(new EventHandler<MouseEvent>() {
+	        @Override public void handle(MouseEvent mouseEvent) {
+	          getChildren().clear();
+	          setCursor(Cursor.CROSSHAIR);
+	        }
+	      });
+	    }
+
+	    private Label createDataThresholdLabel(int priorValue, int value) {
+	      final Label label = new Label(value + "");
+	      label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
+	      label.setStyle("-fx-font-size: 20; -fx-font-weight: bold;");
+
+	      if (priorValue == 0) {
+	        label.setTextFill(Color.DARKGRAY);
+	      } else if (value > priorValue) {
+	        label.setTextFill(Color.FORESTGREEN);
+	      } else {
+	        label.setTextFill(Color.FIREBRICK);
+	      }
+
+	      label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
+	      return label;
+	    }
 	  }
 
 	//JavaFX applications use the main method to launch the GUI.
