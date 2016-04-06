@@ -1,25 +1,32 @@
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
 
 /*
  * Movement object
- * @version 2016_03_02
+ * @version 2016_04_06
  * @author Jennifer Hunter
  */
 public class Movement {
-	  private Date time; // the time of the start of the event
-	  private double str; // peak g-force of the event
+	  private final Date time; // the time of the start of the event
+	  private final double str; // peak g-force of the event
 	  private enum eventType { 
 		  P, R, I, U 	// P = PLM, R = Rejected, I = Isolated, U = User Added
 	  };
-	  private eventType type; // what type of event is it
-	  private double dur; // duration of the event
-	  private double interval; // time between end of previous event and this one
-	  private boolean down; // flag that the leg is down (< 65 degrees from horizontal)
+	  private final eventType type; // what type of event is it
+	  private final double dur; // duration of the event
+	  private final double interval; // time between end of previous event and this one
+	  private final boolean down; // flag that the leg is down (< 65 degrees from horizontal)
+	  private final String reason; // reason for rejection
 	  
-	  Movement(Date time, double str) {
+	  Movement(Date time, String event, double str, double dur, double interval, boolean down, String reason) {
 		  this.time=time;
+		  type = eventType.valueOf(event);
 		  this.str=str;
+		  this.dur = dur;
+		  this.interval = interval;
+		  this.down = down;
+		  this.reason = reason;
 	  }
 	  
 	  /*
@@ -67,6 +74,13 @@ public class Movement {
 	  }
 	  
 	  /*
+	   * @returns the rejection reason
+	   */
+	  public String getReason() {
+		  return reason;
+	  }
+	  
+	  /*
 	   * Determines if two movement objects are equal
 	   * (non-Javadoc)
 	   * @see java.lang.Object#equals(java.lang.Object)
@@ -110,4 +124,15 @@ public class Movement {
 	      	+ 7 * Objects.hashCode(interval) + 23 * Objects.hashCode(down))
 	    	+ 17);
 	  }
+	  
+	  /* Returns the string representation of this Movement.
+	   */
+	   @Override
+	   public String toString() {
+		   // Format for dates on x-axis
+		   SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		   
+	       return String.format(dateFormat.format(time)+ ", " + type + ", " + str, ", " + dur + ", "
+	    		   + interval + ", " + down + ", " + reason);
+	   }
 }

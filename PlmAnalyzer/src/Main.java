@@ -11,7 +11,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -22,11 +21,9 @@ import javafx.scene.Scene;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.LineChart;
-import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
@@ -41,7 +38,6 @@ import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
-import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -69,6 +65,8 @@ public class Main extends Application {
 	private double thresholdValue = 1.0;
 	// Data retrieved from csv
 	private ObservableList <LineChart.Data<Date, Number>> data;
+	// Movement analysis retrieved from csv
+	private ObservableList <Movement> mov;
 	// How many data points can be seen at a screen at once - default = 5.0
 	private int screenCapacity = 5;
 	// Format for dates on x-axis
@@ -96,6 +94,8 @@ public class Main extends Application {
 	public void start(Stage stage) {
 		// Store the raw data points in an observable array list
 		data = FXCollections.observableArrayList();
+		// Store the analyzed movement data in an observable array list
+		mov = FXCollections.observableArrayList();
 		
 		// Create a vertical box to show the chartsc3
 	    content = new VBox();
@@ -408,7 +408,19 @@ public class Main extends Application {
 		 MenuItem importAnalysis = new MenuItem("Import Analysis File");
 		 importAnalysis.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
-	  	     }
+				// Open a file choose dialog to decide which file to open
+				   FileChooser fileChooser = new FileChooser();
+				   fileChooser.setTitle("Open File");
+				   fileChooser.getExtensionFilters().addAll(
+						   // Only look for text files and csv files
+			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
+			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
+				   File analysisFile =  fileChooser.showOpenDialog(stage);
+				   if (analysisFile != null && analysisFile.exists()) { 
+	                	// Extract the data from the csv
+						extractAnalysis(analysisFile);
+				   }
+			   }
 		 });
 		 file.getItems().add(importAnalysis);
 		 // Ctrl + I to open the import
@@ -489,31 +501,51 @@ public class Main extends Application {
 	            BufferedReader bufferedReader = 
 	                new BufferedReader(fileReader);
 
-	            while((line = bufferedReader.readLine()) != null) {
-	                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
-	                // 01234567890123456789012345678901234567890123456789012
-	                
-	                String[] value = line.split("");
-	                Calendar event = Calendar.getInstance();
-	                // Parse the values for the date
-	                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
-	                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
-	                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
-	                		Integer.parseInt(value[17] + value[18]));
-	                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
-	                // Parse the accelerometer and gyroscope values
-	                double ax = Double.parseDouble(value[24] + value[25] + value[26] + value[27]);
-	                double ay = Double.parseDouble(value[29] + value[30] + value[31] + value[32]);
-	                double az = Double.parseDouble(value[34] + value[35] + value[36] + value[37]);
-	                double gx = Double.parseDouble(value[39] + value[40] + value[41] + value[42]);
-	                double gy = Double.parseDouble(value[44] + value[45] + value[46] + value[47]);
-	                double gz = Double.parseDouble(value[49] + value[50] + value[51] + value[52]);
-	                // Get the magnitudes for the accelerometer and gyroscope
-	                double accel = Math.sqrt(ax*ax + ay*ay + az*az);
-	                double gyro = Math.sqrt(gx*gx + gy*gy + gz*gz);
-	                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
-	            }   
+	            try {
+		            while((line = bufferedReader.readLine()) != null) {
+		                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
+		                // 01234567890123456789012345678901234567890123456789012
+		                
+		                String[] value = line.split("");
+		                // Check if the first value is a number = not title 
+		            	boolean ret = true;
+		                try {
+		                    Double.parseDouble(value[0]);
+	
+		                }catch (NumberFormatException e) {
+		                    ret = false;
+		                }
+		                
+		            	if (ret) {
+			                Calendar event = Calendar.getInstance();
+			                // Parse the values for the date
+			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
+			                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
+			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
+			                		Integer.parseInt(value[17] + value[18]));
+			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
+			                // Parse the accelerometer and gyroscope values
+			                double ax = Double.parseDouble(value[24] + value[25] + value[26] + value[27]);
+			                double ay = Double.parseDouble(value[29] + value[30] + value[31] + value[32]);
+			                double az = Double.parseDouble(value[34] + value[35] + value[36] + value[37]);
+			                double gx = Double.parseDouble(value[39] + value[40] + value[41] + value[42]);
+			                double gy = Double.parseDouble(value[44] + value[45] + value[46] + value[47]);
+			                double gz = Double.parseDouble(value[49] + value[50] + value[51] + value[52]);
+			                // Get the magnitudes for the accelerometer and gyroscope
+			                double accel = Math.sqrt(ax*ax + ay*ay + az*az);
+			                double gyro = Math.sqrt(gx*gx + gy*gy + gz*gz);
+			                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
+			            }   
+		            }
+	            } catch (Exception e) {
+	            	Alert alert = new Alert(AlertType.ERROR);
+	            	alert.setTitle("Error: Open File Error");
+	            	alert.setHeaderText("Open File Error");
+	            	alert.setContentText("The data file you attempted to open was of the wrong type or was misformatted."
+	            			+ "\nPlease check your file and try again.");
 
+	            	alert.showAndWait();
+	            }
 	            // Always close files.
 	            bufferedReader.close();         
 	      } catch(FileNotFoundException ex) {
@@ -527,6 +559,96 @@ public class Main extends Application {
 	      }
 	  }
 	  
+	  /**
+	  * Extract the accelerometer data from the device's csv file
+	 * @param dataFile 
+	  */
+	  public void extractAnalysis(File analysisFile) {
+	      // This will reference one line at a time
+	      String line = null;
+
+	      try {
+	            // FileReader reads text files in the default encoding.
+	            FileReader fileReader = 
+	                new FileReader(analysisFile);
+
+	            // Always wrap FileReader in BufferedReader.
+	            BufferedReader bufferedReader = 
+	                new BufferedReader(fileReader);
+	            try {
+		            while((line = bufferedReader.readLine()) != null) {
+		                // YYYY-MM-DD hh:mm:ss.sss,E,strG,duraS,intvS,d,
+		                // 01234567890123456789012345678901234567890123456789012
+		            	String[] value = line.split("");
+		            	// Check if the first value is a number = not title/header
+		            	boolean ret = true;
+		                try {
+		                    Double.parseDouble(value[0]);
+	
+		                }catch (NumberFormatException e) {
+		                    ret = false;
+		                }
+		                
+		            	if (ret) {
+			                Calendar event = Calendar.getInstance();
+			                // Parse the values for the date
+			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
+			                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
+			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
+			                		Integer.parseInt(value[17] + value[18]));
+			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
+			                // Parse the event type
+			                String eType = value[24];
+			                // Parse the strength
+			                double str = Double.parseDouble(value[26] + value[27] + value[28] +  value[29]);
+			                // Parse the duration
+			                double dur = Double.parseDouble(value[31] + value[32] + value[33] +  value[34] + value[35]);
+			                // Parse the interval - if text is nan, interval = positive infinity
+			                double inv = Double.POSITIVE_INFINITY;
+			                try {
+			                	inv = Double.parseDouble((value[37] + value[38] + value[39] +  value[40] + value[41]).trim());
+			                } catch (NumberFormatException nfe) {}
+			                
+			                // Parse if the leg is down or up - default true
+			                boolean leg = true;
+			                if (value[43].equals("f")) {
+			                	leg = false;
+			                }
+			                // Parse the reason for rejection
+			                String reason = "";
+			                if (value.length > 45) {
+				                for (int i = 45; i < value.length; i++) {
+				                	reason += value[i];
+				                }
+			                }
+			                // Create a movement with the values and add to the list
+			                mov.add(new Movement(event.getTime(), eType, str, dur, inv, leg, reason));
+			            }   
+		            }
+	            } catch (Exception e) {
+	            	Alert alert = new Alert(AlertType.ERROR);
+	            	alert.setTitle("Error: Open File Error");
+	            	alert.setHeaderText("Open File Error");
+	            	alert.setContentText("The data file you attempted to open was of the wrong type or was misformatted."
+	            			+ "\nPlease check your file and try again.");
+
+	            	alert.showAndWait();
+	            }
+	            // Always close files.
+	            bufferedReader.close();         
+	      } catch(FileNotFoundException ex) {
+	            System.out.println(
+	                "Unable to open file '" + 
+	                analysisFile.getName() + "'");                
+	      } catch(IOException ex) {
+	            System.out.println(
+	                "Error reading file '" 
+	                + analysisFile.getName() + "'");
+	      }
+	      for (int i = 0; i < mov.size(); i++) {
+	    	  System.out.println(mov.get(i));
+	      }
+	  }
 
 	  /** @return plotted y values for monotonically increasing integer x values, starting from x=1 */
 	  public ObservableList<XYChart.Data<Integer, Integer>> plot(int... y) {
