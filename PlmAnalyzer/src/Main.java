@@ -29,6 +29,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -36,6 +37,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.input.KeyCode;
@@ -59,7 +61,7 @@ public class Main extends Application {
 	private DoubleProperty eph = new SimpleDoubleProperty();
 	// Menus
 	private Menu file, paramSetup,
-		reports, about;
+		reports;
 
 	// Threshold value - default to 1.0
 	private double thresholdValue = 1.0;
@@ -169,12 +171,13 @@ public class Main extends Application {
 	    // Setup the top menu toolbar
 	    MenuBar menuBar = new MenuBar();
 	    setupMenu(stage);
-	    menuBar.getMenus().addAll(file, paramSetup, reports, about);
+	    menuBar.getMenus().addAll(file, paramSetup, reports);
 	    
 	    // Add spacing between the children
 	    content.setSpacing(15.0);
 	    // Add the dataPoint text, the charts, the slider, the table, and the analyze button
 	    content.getChildren().addAll(dataPoint, ephText, chart);
+	    VBox.setVgrow(chart, Priority.ALWAYS);
 	    
 	    // Add the menu to the top of the GUI
 	    borderpane.setTop(menuBar);
@@ -214,21 +217,6 @@ public class Main extends Application {
 	
 	    reports = new Menu("Reports");
 	    setupReports();
-	
-	    about = new Menu("About");
-	    about.setOnAction(e -> {
-	    	System.out.println("About was clicked.");
-	    	// Generate a dialog box with the about info
-	    	Alert alert = new Alert(AlertType.INFORMATION);
-	    	alert.setTitle("About");
-	    	alert.setHeaderText("About the PLM Analyzer");
-	    	alert.setContentText("Michael Alexander Haver, Jennifer Hunter, Robert Lee, Kevin Powell, and Joesph Thompson"
-	    			+ "designed this PLM Analyzer for the Emory Sleep Lab. /n2016");
-	    	alert.initOwner(stage);
-	    	alert.showAndWait();
-	    	}
-	    	
-	    );
 	}
 	
 	/**
@@ -378,6 +366,7 @@ public class Main extends Application {
 					    
 					    // Add the new chart and slider to the GUI
 						content.getChildren().add(chart);
+						VBox.setVgrow(chart, Priority.ALWAYS);
 						borderpane.setBottom(slider);
 				   	}
 			   }}
@@ -407,7 +396,8 @@ public class Main extends Application {
 		 // Import Analysis
 		 MenuItem importAnalysis = new MenuItem("Import Analysis File");
 		 importAnalysis.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
+			   @SuppressWarnings("unchecked")
+			public void handle(ActionEvent t) {
 				// Open a file choose dialog to decide which file to open
 				   FileChooser fileChooser = new FileChooser();
 				   fileChooser.setTitle("Open File");
@@ -416,10 +406,142 @@ public class Main extends Application {
 			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
 			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
 				   File analysisFile =  fileChooser.showOpenDialog(stage);
-				   if (analysisFile != null && analysisFile.exists()) { 
+				   if (analysisFile != null && analysisFile.exists() & !data.isEmpty()) { 
 	                	// Extract the data from the csv
 						extractAnalysis(analysisFile);
-				   }
+						// Reset chart with extra data nodes
+						// Remove the old chart and slider from the GUI
+					    content.getChildren().remove(chart);
+					    borderpane.getChildren().remove(slider);
+						// Define the axes
+					    xAxis = new DateAxis();
+					    yAxis = new NumberAxis(0, 7, 1);
+					    
+					    // Name the axes
+					    xAxis.setLabel("Time");
+					    yAxis.setLabel("Force (g)");
+					    
+					    // Format the axes
+					    xAxis.setAutoRanging(true);
+					    yAxis.setAutoRanging(true);
+					    
+						//Create the line chart
+					    chart = new LineChartWithMarkers(xAxis, yAxis);
+					    // Set chart title
+					    chart.setTitle("Leg Movement Analysis");
+					    // Set node ID
+					    chart.setId("chart");
+					    // Show datepoint symbols
+					    chart.setCreateSymbols(true);
+					    // Hide the chart legend
+					    chart.setLegendVisible(false); 
+					    // Make the horizontal grid lines visible for easier reference
+					    chart.setHorizontalGridLinesVisible(true);
+					    // Turn off animation
+					    chart.setAnimated(false);
+					    
+					    // Change the data point text when the mouse is moved over the chart
+						chart.setOnMouseMoved(new EventHandler<MouseEvent>() {
+						      @Override public void handle(MouseEvent mouseEvent) {
+						    	  // Create a 2D point for where the mouse is located in the scene
+						    	  Point2D pointInScene = new Point2D(mouseEvent.getSceneX(), mouseEvent.getSceneY());
+						    	  // Calculate what that 2D x-value corresponds to in reference to the x-axis
+						    	  double xPosInAxis = xAxis.sceneToLocal(new Point2D(pointInScene.getX(), 0)).getX();
+						    	  // Calculate what that 2D x-y-value corresponds to in reference to the y-axis
+						    	  double yPosInAxis = yAxis.sceneToLocal(new Point2D(0, pointInScene.getY())).getY();
+						    	  // Get the chart values corresponding to the values at the axes
+						    	  Date x = xAxis.getValueForDisplay(xPosInAxis);
+						    	  double y = yAxis.getValueForDisplay(yPosInAxis).doubleValue();
+						    	    
+						    	  //Format the number to a prettier string
+						    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
+							      // Update the string label on the top of the chart
+						    	  dataPoint.setText("Force: " + numFormat.format(y)
+							          	+ "; Time: " + dateFormat.format(x));
+						      	}
+						});
+
+					    // Add a horizontal marker as a threshold
+					    XYChart.Data<Date, Number> horizontalMarker = new XYChart.Data<Date, Number>(new Date(), thresholdValue);
+				        chart.addHorizontalValueMarker(horizontalMarker);
+				        
+				        // Add a series based off the data
+				        chart.getData().add(new LineChart.Series<Date, Number>(plot()));
+
+					    // Change the cursor to a crosshair when on the chart
+					    chart.setCursor(Cursor.CROSSHAIR);	
+					    // Bring the chart to the front of the scene
+					    chart.toFront();
+					    
+					    // Setup time slider
+					    slider = new Slider();
+					    slider.setMin(0);
+					    slider.setValue(0);
+					    slider.setShowTickMarks(true);
+					    slider.setMajorTickUnit(10);
+					    slider.setMinorTickCount(5);
+					    slider.setBlockIncrement(5);
+					    
+	            		if (chart != null) {
+		            		LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) chart.getData().get(0);
+		            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+		            		// Set the max slider value of the slider
+		            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+		            		slider.setMax(max);
+	            		}
+	            		
+					    // Change the chart view when the slider is moved
+					    slider.valueProperty().addListener((
+				            ObservableValue<? extends Number> ov, 
+				            Number oldVal, Number newVal) -> {
+				            	if (data.size() > 0) {
+				            		// Get an updated reference of the chart on the graph
+				            		LineChart<Date,Number> c = (LineChart<Date,Number>) content.lookup("#chart");
+				            		if (c != null) {
+					            		LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) c.getData().get(0);
+					            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+					            		// Set the max slider value of the slider
+					            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+					            		slider.setMax(max);
+					            		slider.setMin(0);
+					            		
+					            		slider.setFocusTraversable(true);
+					            		
+							            // the upper bound is the value of the slider
+							            int up = (int) Math.round((double)newVal);
+							            // the lower bound is the slider value minus the screen capacity
+							            int low = (int) Math.round((double)newVal) - screenCapacity;
+							            // If the lower bound is less than 0, set it to 0
+							            low = (low < 0)? 0 : low;
+							            // If the lower bound is greater than max - screen capacity,
+							            // set it equal to the max slider value - screen capacity
+							            low = (low > max - screenCapacity)? 
+							            		max - screenCapacity : low;
+							            // If the upper bound, is less than the screen capacity,
+							            // set it to the screen capacity
+							            up = (up < screenCapacity)? screenCapacity : up;
+							
+							            // Get the date values for the bounds
+							            Date upper = chartData.get(up).getXValue();
+							            Date lower = chartData.get(low).getXValue();
+							
+							            // Set the upper and lower bounds of the chart
+							            ((DateAxis)c.getXAxis()).setUpperBound(upper);
+							            ((DateAxis)c.getXAxis()).setLowerBound(lower);
+							            
+							            
+				            		} else {
+				            			System.out.println("Chart is null.");
+				            			
+				            		}
+				            	}
+				        });
+					    
+					    // Add the new chart and slider to the GUI
+						content.getChildren().add(chart);
+						VBox.setVgrow(chart, Priority.ALWAYS);
+						borderpane.setBottom(slider);
+				   	}
 			   }
 		 });
 		 file.getItems().add(importAnalysis);
@@ -645,26 +767,25 @@ public class Main extends Application {
 	                "Error reading file '" 
 	                + analysisFile.getName() + "'");
 	      }
-	      for (int i = 0; i < mov.size(); i++) {
-	    	  System.out.println(mov.get(i));
-	      }
 	  }
 
 	  /** @return plotted y values for monotonically increasing integer x values, starting from x=1 */
-	  public ObservableList<XYChart.Data<Integer, Integer>> plot(int... y) {
-	    final ObservableList<XYChart.Data<Integer, Integer>> dataset = FXCollections.observableArrayList();
-	    int i = 0;
-	    while (i < y.length) {
-	      final XYChart.Data<Integer, Integer> data = new XYChart.Data<>(i + 1, y[i]);
-	      data.setNode(
-	          new HoveredThresholdNode(
-	              (i == 0) ? 0 : y[i-1],
-	              y[i]
-	          )
-	      );
-
-	      dataset.add(data);
-	      i++;
+	  public ObservableList<XYChart.Data<Date, Number>> plot() {
+	    final ObservableList<XYChart.Data<Date, Number>> dataset = FXCollections.observableArrayList();
+	    // For each movement in the list add a node
+	    for (LineChart.Data<Date, Number> val : data) {
+	    	final LineChart.Data<Date, Number> point = val;
+	    	for (Movement m : mov) {
+	    		if (val.getXValue().equals(m.getTime())){
+	    	    	String lab = "Start Time: " + dateFormat.format(m.getTime()) + "\nEvent Type: " + m.getType() + "\nStrength: "  + m.getStr() + "\nDuration: " + m.getDur()
+	    	    		+ "\nInterval: " + m.getInterval();
+	    	    	if (!m.getReason().isEmpty()) {
+	    	    		lab += "\nRejection Reason: " + m.getReason();
+	    	    	}
+	    	    	point.setNode(new HoveredThresholdNode(lab));
+	    		}
+	    	}
+	    	dataset.add(point);
 	    }
 
 	    return dataset;
@@ -672,41 +793,42 @@ public class Main extends Application {
 
 	  /** a node which displays a value on hover, but is otherwise empty */
 	  class HoveredThresholdNode extends StackPane {
-	    HoveredThresholdNode(int priorValue, int value) {
+	    HoveredThresholdNode(String l) {
 	      setPrefSize(15, 15);
 
-	      final Label label = createDataThresholdLabel(priorValue, value);
+	      final Label label = new Label(l);
+	      label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
+	      label.setStyle("-fx-font-weight: bold;");
+	      label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
 
 	      setOnMouseEntered(new EventHandler<MouseEvent>() {
 	        @Override public void handle(MouseEvent mouseEvent) {
+	          // When the mouse is hovering, display the label and remove the cursor
 	          getChildren().setAll(label);
 	          setCursor(Cursor.NONE);
+	          // Bring the label in front of the node
 	          toFront();
 	        }
 	      });
 	      setOnMouseExited(new EventHandler<MouseEvent>() {
 	        @Override public void handle(MouseEvent mouseEvent) {
+	          // When the mouse leaves hover, remove the label and reset the cursor to a crosshair
 	          getChildren().clear();
 	          setCursor(Cursor.CROSSHAIR);
 	        }
 	      });
-	    }
+	      
+	      setOnMouseClicked(new EventHandler<MouseEvent>() {
+		        @Override public void handle(MouseEvent mouseEvent) {
+		          // When the mouse is clicked, open a dialog box with the label
+		        	Alert alert = new Alert(AlertType.INFORMATION);
+	            	alert.setTitle("Movement Information");
+	            	alert.setHeaderText("Movement Details");
+	            	alert.setContentText(label.getText());
 
-	    private Label createDataThresholdLabel(int priorValue, int value) {
-	      final Label label = new Label(value + "");
-	      label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
-	      label.setStyle("-fx-font-size: 20; -fx-font-weight: bold;");
-
-	      if (priorValue == 0) {
-	        label.setTextFill(Color.DARKGRAY);
-	      } else if (value > priorValue) {
-	        label.setTextFill(Color.FORESTGREEN);
-	      } else {
-	        label.setTextFill(Color.FIREBRICK);
-	      }
-
-	      label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
-	      return label;
+	            	alert.showAndWait();
+		        }
+	      });
 	    }
 	  }
 

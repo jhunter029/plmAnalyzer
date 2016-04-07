@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <qualifiedTypeNameHistroy>
-<fullyQualifiedTypeName name="javafx.scene.text.Text"/>
 <fullyQualifiedTypeName name="javafx.scene.control.ListView"/>
 <fullyQualifiedTypeName name="javafx.scene.text.Font"/>
 <fullyQualifiedTypeName name="javafx.scene.layout.HBox"/>
@@ -59,4 +58,6 @@
 <fullyQualifiedTypeName name="java.util.Date"/>
 <fullyQualifiedTypeName name="java.util.Observable"/>
 <fullyQualifiedTypeName name="javafx.scene.chart.XYChart.Series"/>
+<fullyQualifiedTypeName name="javafx.scene.layout.Priority"/>
+<fullyQualifiedTypeName name="javafx.geometry.NodeOrientation"/>
 </qualifiedTypeNameHistroy>
