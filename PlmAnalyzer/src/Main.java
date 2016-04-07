@@ -11,7 +11,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -22,16 +21,15 @@ import javafx.scene.Scene;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.LineChart;
-import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -39,9 +37,9 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
-import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -62,13 +60,15 @@ public class Main extends Application {
 	// Average PLM events per hour 
 	private DoubleProperty eph = new SimpleDoubleProperty();
 	// Menus
-	private Menu file, display, paramSetup,
-		reports, about;
+	private Menu file, paramSetup,
+		reports;
 
 	// Threshold value - default to 1.0
 	private double thresholdValue = 1.0;
 	// Data retrieved from csv
 	private ObservableList <LineChart.Data<Date, Number>> data;
+	// Movement analysis retrieved from csv
+	private ObservableList <Movement> mov;
 	// How many data points can be seen at a screen at once - default = 5.0
 	private int screenCapacity = 5;
 	// Format for dates on x-axis
@@ -96,6 +96,8 @@ public class Main extends Application {
 	public void start(Stage stage) {
 		// Store the raw data points in an observable array list
 		data = FXCollections.observableArrayList();
+		// Store the analyzed movement data in an observable array list
+		mov = FXCollections.observableArrayList();
 		
 		// Create a vertical box to show the chartsc3
 	    content = new VBox();
@@ -169,13 +171,13 @@ public class Main extends Application {
 	    // Setup the top menu toolbar
 	    MenuBar menuBar = new MenuBar();
 	    setupMenu(stage);
-	    menuBar.getMenus().addAll(file, display, paramSetup,
-	    		reports, about);
+	    menuBar.getMenus().addAll(file, paramSetup, reports);
 	    
 	    // Add spacing between the children
 	    content.setSpacing(15.0);
 	    // Add the dataPoint text, the charts, the slider, the table, and the analyze button
 	    content.getChildren().addAll(dataPoint, ephText, chart);
+	    VBox.setVgrow(chart, Priority.ALWAYS);
 	    
 	    // Add the menu to the top of the GUI
 	    borderpane.setTop(menuBar);
@@ -210,31 +212,11 @@ public class Main extends Application {
 	    file = new Menu("File");
 	    setupFile(stage);
 	
-	    display = new Menu("Display");
-	    display.setOnAction(e -> {
-	        }
-	    );
-	
 	    paramSetup = new Menu("Parameter Setup");
 	    setupParamSetup();
 	
 	    reports = new Menu("Reports");
 	    setupReports();
-	
-	    about = new Menu("About");
-	    about.setOnAction(e -> {
-	    	System.out.println("About was clicked.");
-	    	// Generate a dialog box with the about info
-	    	Alert alert = new Alert(AlertType.INFORMATION);
-	    	alert.setTitle("About");
-	    	alert.setHeaderText("About the PLM Analyzer");
-	    	alert.setContentText("Michael Alexander Haver, Jennifer Hunter, Robert Lee, Kevin Powell, and Joesph Thompson"
-	    			+ "designed this PLM Analyzer for the Emory Sleep Lab. /n2016");
-	    	alert.initOwner(stage);
-	    	alert.showAndWait();
-	    	}
-	    	
-	    );
 	}
 	
 	/**
@@ -384,6 +366,7 @@ public class Main extends Application {
 					    
 					    // Add the new chart and slider to the GUI
 						content.getChildren().add(chart);
+						VBox.setVgrow(chart, Priority.ALWAYS);
 						borderpane.setBottom(slider);
 				   	}
 			   }}
@@ -406,22 +389,164 @@ public class Main extends Application {
 	  	     }
 		 });
 		 file.getItems().add(saveAs);
+		 // Ctrl + S to save the analysis movement list to a file
 		 saveAs.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-		// Save Raw Data
-		 MenuItem saveRaw = new MenuItem("Save Raw Data");
-		 saveRaw.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
-	  	     }
-		 });
-		 file.getItems().add(saveRaw);
 		 
-		// File Information
-		 MenuItem fileInfo = new MenuItem("File Information");
-		 fileInfo.setOnAction(new EventHandler<ActionEvent>() {
-			   public void handle(ActionEvent t) {
-	  	     }
+		 
+		 // Import Analysis
+		 MenuItem importAnalysis = new MenuItem("Import Analysis File");
+		 importAnalysis.setOnAction(new EventHandler<ActionEvent>() {
+			   @SuppressWarnings("unchecked")
+			public void handle(ActionEvent t) {
+				// Open a file choose dialog to decide which file to open
+				   FileChooser fileChooser = new FileChooser();
+				   fileChooser.setTitle("Open File");
+				   fileChooser.getExtensionFilters().addAll(
+						   // Only look for text files and csv files
+			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
+			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
+				   File analysisFile =  fileChooser.showOpenDialog(stage);
+				   if (analysisFile != null && analysisFile.exists() & !data.isEmpty()) { 
+	                	// Extract the data from the csv
+						extractAnalysis(analysisFile);
+						// Reset chart with extra data nodes
+						// Remove the old chart and slider from the GUI
+					    content.getChildren().remove(chart);
+					    borderpane.getChildren().remove(slider);
+						// Define the axes
+					    xAxis = new DateAxis();
+					    yAxis = new NumberAxis(0, 7, 1);
+					    
+					    // Name the axes
+					    xAxis.setLabel("Time");
+					    yAxis.setLabel("Force (g)");
+					    
+					    // Format the axes
+					    xAxis.setAutoRanging(true);
+					    yAxis.setAutoRanging(true);
+					    
+						//Create the line chart
+					    chart = new LineChartWithMarkers(xAxis, yAxis);
+					    // Set chart title
+					    chart.setTitle("Leg Movement Analysis");
+					    // Set node ID
+					    chart.setId("chart");
+					    // Show datepoint symbols
+					    chart.setCreateSymbols(true);
+					    // Hide the chart legend
+					    chart.setLegendVisible(false); 
+					    // Make the horizontal grid lines visible for easier reference
+					    chart.setHorizontalGridLinesVisible(true);
+					    // Turn off animation
+					    chart.setAnimated(false);
+					    
+					    // Change the data point text when the mouse is moved over the chart
+						chart.setOnMouseMoved(new EventHandler<MouseEvent>() {
+						      @Override public void handle(MouseEvent mouseEvent) {
+						    	  // Create a 2D point for where the mouse is located in the scene
+						    	  Point2D pointInScene = new Point2D(mouseEvent.getSceneX(), mouseEvent.getSceneY());
+						    	  // Calculate what that 2D x-value corresponds to in reference to the x-axis
+						    	  double xPosInAxis = xAxis.sceneToLocal(new Point2D(pointInScene.getX(), 0)).getX();
+						    	  // Calculate what that 2D x-y-value corresponds to in reference to the y-axis
+						    	  double yPosInAxis = yAxis.sceneToLocal(new Point2D(0, pointInScene.getY())).getY();
+						    	  // Get the chart values corresponding to the values at the axes
+						    	  Date x = xAxis.getValueForDisplay(xPosInAxis);
+						    	  double y = yAxis.getValueForDisplay(yPosInAxis).doubleValue();
+						    	    
+						    	  //Format the number to a prettier string
+						    	  NumberFormat numFormat = new DecimalFormat("#0.00");     
+							      // Update the string label on the top of the chart
+						    	  dataPoint.setText("Force: " + numFormat.format(y)
+							          	+ "; Time: " + dateFormat.format(x));
+						      	}
+						});
+
+					    // Add a horizontal marker as a threshold
+					    XYChart.Data<Date, Number> horizontalMarker = new XYChart.Data<Date, Number>(new Date(), thresholdValue);
+				        chart.addHorizontalValueMarker(horizontalMarker);
+				        
+				        // Add a series based off the data
+				        chart.getData().add(new LineChart.Series<Date, Number>(plot()));
+
+					    // Change the cursor to a crosshair when on the chart
+					    chart.setCursor(Cursor.CROSSHAIR);	
+					    // Bring the chart to the front of the scene
+					    chart.toFront();
+					    
+					    // Setup time slider
+					    slider = new Slider();
+					    slider.setMin(0);
+					    slider.setValue(0);
+					    slider.setShowTickMarks(true);
+					    slider.setMajorTickUnit(10);
+					    slider.setMinorTickCount(5);
+					    slider.setBlockIncrement(5);
+					    
+	            		if (chart != null) {
+		            		LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) chart.getData().get(0);
+		            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+		            		// Set the max slider value of the slider
+		            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+		            		slider.setMax(max);
+	            		}
+	            		
+					    // Change the chart view when the slider is moved
+					    slider.valueProperty().addListener((
+				            ObservableValue<? extends Number> ov, 
+				            Number oldVal, Number newVal) -> {
+				            	if (data.size() > 0) {
+				            		// Get an updated reference of the chart on the graph
+				            		LineChart<Date,Number> c = (LineChart<Date,Number>) content.lookup("#chart");
+				            		if (c != null) {
+					            		LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) c.getData().get(0);
+					            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+					            		// Set the max slider value of the slider
+					            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+					            		slider.setMax(max);
+					            		slider.setMin(0);
+					            		
+					            		slider.setFocusTraversable(true);
+					            		
+							            // the upper bound is the value of the slider
+							            int up = (int) Math.round((double)newVal);
+							            // the lower bound is the slider value minus the screen capacity
+							            int low = (int) Math.round((double)newVal) - screenCapacity;
+							            // If the lower bound is less than 0, set it to 0
+							            low = (low < 0)? 0 : low;
+							            // If the lower bound is greater than max - screen capacity,
+							            // set it equal to the max slider value - screen capacity
+							            low = (low > max - screenCapacity)? 
+							            		max - screenCapacity : low;
+							            // If the upper bound, is less than the screen capacity,
+							            // set it to the screen capacity
+							            up = (up < screenCapacity)? screenCapacity : up;
+							
+							            // Get the date values for the bounds
+							            Date upper = chartData.get(up).getXValue();
+							            Date lower = chartData.get(low).getXValue();
+							
+							            // Set the upper and lower bounds of the chart
+							            ((DateAxis)c.getXAxis()).setUpperBound(upper);
+							            ((DateAxis)c.getXAxis()).setLowerBound(lower);
+							            
+							            
+				            		} else {
+				            			System.out.println("Chart is null.");
+				            			
+				            		}
+				            	}
+				        });
+					    
+					    // Add the new chart and slider to the GUI
+						content.getChildren().add(chart);
+						VBox.setVgrow(chart, Priority.ALWAYS);
+						borderpane.setBottom(slider);
+				   	}
+			   }
 		 });
-		 file.getItems().add(fileInfo);
+		 file.getItems().add(importAnalysis);
+		 // Ctrl + I to open the import
+		 importAnalysis.setAccelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN));
 		 
 		 // Exit
 		 MenuItem exit = new MenuItem("Exit");
@@ -432,21 +557,13 @@ public class Main extends Application {
 		 });
 		 file.getItems().add(exit);
 		 //Setup Ctrl+Q to activate exit
+		 exit.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
 	 }
 	
 	  /**
 	   * Initialize Menu Items for the paramSetup menu
 	   */
 	public void setupParamSetup() {
-	  	 // Preprocess
-	  	 MenuItem preprocess = new MenuItem("Preprocess");
-	  	 preprocess.setOnAction(new EventHandler<ActionEvent>() {
-	  		   public void handle(ActionEvent t) {
-	    	     }
-	  	 });
-	  	 paramSetup.getItems().add(preprocess);
-	  	 //Setup Ctrl+P to activate preprocess
-	  	 
 	  	 // Set PLM Paramters
 	  	 MenuItem setPLM = new MenuItem("Set PLM Paramters");
 	  	 setPLM.setOnAction(new EventHandler<ActionEvent>() {
@@ -454,24 +571,18 @@ public class Main extends Application {
 	  	     }
 	  	 });
 	  	 paramSetup.getItems().add(setPLM);
-	  	 //Setup Ctrl+K to activate setPLM
+	  	 //Setup Ctrl+P to activate setPLM
+	  	 setPLM.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
 	  	 
-	  	 // PLM Analysis
-	  	 MenuItem plmAnalysis = new MenuItem("PLM Analysis");
-	  	 plmAnalysis.setOnAction(new EventHandler<ActionEvent>() {
+	  	 // Display Paramters
+	  	 MenuItem disp = new MenuItem("Set Display Paramters");
+	  	 disp.setOnAction(new EventHandler<ActionEvent>() {
 	  	     public void handle(ActionEvent t) {
 	  	     }
 	  	 });
-	  	 paramSetup.getItems().add(plmAnalysis);
-	  	 //Setup Ctrl+M to activate plmAnalysis
-	  	 
-	  	 // Paramter Sets
-	  	 MenuItem paramSets = new MenuItem("Parameter Sets");
-	  	 paramSets.setOnAction(new EventHandler<ActionEvent>() {
-	  		   public void handle(ActionEvent t) {
-	    	     }
-	  	 });
-	  	 paramSetup.getItems().add(paramSets);
+	  	 paramSetup.getItems().add(disp);
+	  	 //Setup Ctrl+D to activate display parameters
+	  	 disp.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
 	   }
 	   
    /**
@@ -493,33 +604,13 @@ public class Main extends Application {
 	   	     }
 	   	 });
 	   	 reports.getItems().add(summaries);
-	   	 
-	   	 // PLM Episodes
-	   	 MenuItem plmEpisodes = new MenuItem("PLM Episodes");
-	   	 plmEpisodes.setOnAction(new EventHandler<ActionEvent>() {
-	   		   public void handle(ActionEvent t) {
-	     	     }
-	   	 });
-	   	 reports.getItems().add(plmEpisodes);
-	   	 
-	   	 // Verify Events
-	   	 MenuItem verify = new MenuItem("Verify Events");
-	   	 verify.setOnAction(new EventHandler<ActionEvent>() {
-	   		   public void handle(ActionEvent t) {
-	     	     }
-	   	 });
-	   	 reports.getItems().add(verify);
-	    }
-	  
+	}
 	  
 	 /**
 	  * Extract the accelerometer data from the device's csv file
 	 * @param dataFile 
 	  */
 	  public void extractData(File dataFile) {
-		  // Extract data with file i/o shiz
-		  // For now just put random numbers
-
 	      // This will reference one line at a time
 	      String line = null;
 
@@ -532,31 +623,51 @@ public class Main extends Application {
 	            BufferedReader bufferedReader = 
 	                new BufferedReader(fileReader);
 
-	            while((line = bufferedReader.readLine()) != null) {
-	                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
-	                // 01234567890123456789012345678901234567890123456789012
-	                
-	                String[] value = line.split("");
-	                Calendar event = Calendar.getInstance();
-	                // Parse the values for the date
-	                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
-	                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
-	                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
-	                		Integer.parseInt(value[17] + value[18]));
-	                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
-	                // Parse the accelerometer and gyroscope values
-	                double ax = Double.parseDouble(value[24] + value[25] + value[26] + value[27]);
-	                double ay = Double.parseDouble(value[29] + value[30] + value[31] + value[32]);
-	                double az = Double.parseDouble(value[34] + value[35] + value[36] + value[37]);
-	                double gx = Double.parseDouble(value[39] + value[40] + value[41] + value[42]);
-	                double gy = Double.parseDouble(value[44] + value[45] + value[46] + value[47]);
-	                double gz = Double.parseDouble(value[49] + value[50] + value[51] + value[52]);
-	                // Get the magnitudes for the accelerometer and gyroscope
-	                double accel = Math.sqrt(ax*ax + ay*ay + az*az);
-	                double gyro = Math.sqrt(gx*gx + gy*gy + gz*gz);
-	                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
-	            }   
+	            try {
+		            while((line = bufferedReader.readLine()) != null) {
+		                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
+		                // 01234567890123456789012345678901234567890123456789012
+		                
+		                String[] value = line.split("");
+		                // Check if the first value is a number = not title 
+		            	boolean ret = true;
+		                try {
+		                    Double.parseDouble(value[0]);
+	
+		                }catch (NumberFormatException e) {
+		                    ret = false;
+		                }
+		                
+		            	if (ret) {
+			                Calendar event = Calendar.getInstance();
+			                // Parse the values for the date
+			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
+			                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
+			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
+			                		Integer.parseInt(value[17] + value[18]));
+			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
+			                // Parse the accelerometer and gyroscope values
+			                double ax = Double.parseDouble(value[24] + value[25] + value[26] + value[27]);
+			                double ay = Double.parseDouble(value[29] + value[30] + value[31] + value[32]);
+			                double az = Double.parseDouble(value[34] + value[35] + value[36] + value[37]);
+			                double gx = Double.parseDouble(value[39] + value[40] + value[41] + value[42]);
+			                double gy = Double.parseDouble(value[44] + value[45] + value[46] + value[47]);
+			                double gz = Double.parseDouble(value[49] + value[50] + value[51] + value[52]);
+			                // Get the magnitudes for the accelerometer and gyroscope
+			                double accel = Math.sqrt(ax*ax + ay*ay + az*az);
+			                double gyro = Math.sqrt(gx*gx + gy*gy + gz*gz);
+			                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
+			            }   
+		            }
+	            } catch (Exception e) {
+	            	Alert alert = new Alert(AlertType.ERROR);
+	            	alert.setTitle("Error: Open File Error");
+	            	alert.setHeaderText("Open File Error");
+	            	alert.setContentText("The data file you attempted to open was of the wrong type or was misformatted."
+	            			+ "\nPlease check your file and try again.");
 
+	            	alert.showAndWait();
+	            }
 	            // Always close files.
 	            bufferedReader.close();         
 	      } catch(FileNotFoundException ex) {
@@ -570,22 +681,111 @@ public class Main extends Application {
 	      }
 	  }
 	  
+	  /**
+	  * Extract the accelerometer data from the device's csv file
+	 * @param dataFile 
+	  */
+	  public void extractAnalysis(File analysisFile) {
+	      // This will reference one line at a time
+	      String line = null;
+
+	      try {
+	            // FileReader reads text files in the default encoding.
+	            FileReader fileReader = 
+	                new FileReader(analysisFile);
+
+	            // Always wrap FileReader in BufferedReader.
+	            BufferedReader bufferedReader = 
+	                new BufferedReader(fileReader);
+	            try {
+		            while((line = bufferedReader.readLine()) != null) {
+		                // YYYY-MM-DD hh:mm:ss.sss,E,strG,duraS,intvS,d,
+		                // 01234567890123456789012345678901234567890123456789012
+		            	String[] value = line.split("");
+		            	// Check if the first value is a number = not title/header
+		            	boolean ret = true;
+		                try {
+		                    Double.parseDouble(value[0]);
+	
+		                }catch (NumberFormatException e) {
+		                    ret = false;
+		                }
+		                
+		            	if (ret) {
+			                Calendar event = Calendar.getInstance();
+			                // Parse the values for the date
+			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
+			                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
+			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
+			                		Integer.parseInt(value[17] + value[18]));
+			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
+			                // Parse the event type
+			                String eType = value[24];
+			                // Parse the strength
+			                double str = Double.parseDouble(value[26] + value[27] + value[28] +  value[29]);
+			                // Parse the duration
+			                double dur = Double.parseDouble(value[31] + value[32] + value[33] +  value[34] + value[35]);
+			                // Parse the interval - if text is nan, interval = positive infinity
+			                double inv = Double.POSITIVE_INFINITY;
+			                try {
+			                	inv = Double.parseDouble((value[37] + value[38] + value[39] +  value[40] + value[41]).trim());
+			                } catch (NumberFormatException nfe) {}
+			                
+			                // Parse if the leg is down or up - default true
+			                boolean leg = true;
+			                if (value[43].equals("f")) {
+			                	leg = false;
+			                }
+			                // Parse the reason for rejection
+			                String reason = "";
+			                if (value.length > 45) {
+				                for (int i = 45; i < value.length; i++) {
+				                	reason += value[i];
+				                }
+			                }
+			                // Create a movement with the values and add to the list
+			                mov.add(new Movement(event.getTime(), eType, str, dur, inv, leg, reason));
+			            }   
+		            }
+	            } catch (Exception e) {
+	            	Alert alert = new Alert(AlertType.ERROR);
+	            	alert.setTitle("Error: Open File Error");
+	            	alert.setHeaderText("Open File Error");
+	            	alert.setContentText("The data file you attempted to open was of the wrong type or was misformatted."
+	            			+ "\nPlease check your file and try again.");
+
+	            	alert.showAndWait();
+	            }
+	            // Always close files.
+	            bufferedReader.close();         
+	      } catch(FileNotFoundException ex) {
+	            System.out.println(
+	                "Unable to open file '" + 
+	                analysisFile.getName() + "'");                
+	      } catch(IOException ex) {
+	            System.out.println(
+	                "Error reading file '" 
+	                + analysisFile.getName() + "'");
+	      }
+	  }
 
 	  /** @return plotted y values for monotonically increasing integer x values, starting from x=1 */
-	  public ObservableList<XYChart.Data<Integer, Integer>> plot(int... y) {
-	    final ObservableList<XYChart.Data<Integer, Integer>> dataset = FXCollections.observableArrayList();
-	    int i = 0;
-	    while (i < y.length) {
-	      final XYChart.Data<Integer, Integer> data = new XYChart.Data<>(i + 1, y[i]);
-	      data.setNode(
-	          new HoveredThresholdNode(
-	              (i == 0) ? 0 : y[i-1],
-	              y[i]
-	          )
-	      );
-
-	      dataset.add(data);
-	      i++;
+	  public ObservableList<XYChart.Data<Date, Number>> plot() {
+	    final ObservableList<XYChart.Data<Date, Number>> dataset = FXCollections.observableArrayList();
+	    // For each movement in the list add a node
+	    for (LineChart.Data<Date, Number> val : data) {
+	    	final LineChart.Data<Date, Number> point = val;
+	    	for (Movement m : mov) {
+	    		if (val.getXValue().equals(m.getTime())){
+	    	    	String lab = "Start Time: " + dateFormat.format(m.getTime()) + "\nEvent Type: " + m.getType() + "\nStrength: "  + m.getStr() + "\nDuration: " + m.getDur()
+	    	    		+ "\nInterval: " + m.getInterval();
+	    	    	if (!m.getReason().isEmpty()) {
+	    	    		lab += "\nRejection Reason: " + m.getReason();
+	    	    	}
+	    	    	point.setNode(new HoveredThresholdNode(lab));
+	    		}
+	    	}
+	    	dataset.add(point);
 	    }
 
 	    return dataset;
@@ -593,41 +793,42 @@ public class Main extends Application {
 
 	  /** a node which displays a value on hover, but is otherwise empty */
 	  class HoveredThresholdNode extends StackPane {
-	    HoveredThresholdNode(int priorValue, int value) {
+	    HoveredThresholdNode(String l) {
 	      setPrefSize(15, 15);
 
-	      final Label label = createDataThresholdLabel(priorValue, value);
+	      final Label label = new Label(l);
+	      label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
+	      label.setStyle("-fx-font-weight: bold;");
+	      label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
 
 	      setOnMouseEntered(new EventHandler<MouseEvent>() {
 	        @Override public void handle(MouseEvent mouseEvent) {
+	          // When the mouse is hovering, display the label and remove the cursor
 	          getChildren().setAll(label);
 	          setCursor(Cursor.NONE);
+	          // Bring the label in front of the node
 	          toFront();
 	        }
 	      });
 	      setOnMouseExited(new EventHandler<MouseEvent>() {
 	        @Override public void handle(MouseEvent mouseEvent) {
+	          // When the mouse leaves hover, remove the label and reset the cursor to a crosshair
 	          getChildren().clear();
 	          setCursor(Cursor.CROSSHAIR);
 	        }
 	      });
-	    }
+	      
+	      setOnMouseClicked(new EventHandler<MouseEvent>() {
+		        @Override public void handle(MouseEvent mouseEvent) {
+		          // When the mouse is clicked, open a dialog box with the label
+		        	Alert alert = new Alert(AlertType.INFORMATION);
+	            	alert.setTitle("Movement Information");
+	            	alert.setHeaderText("Movement Details");
+	            	alert.setContentText(label.getText());
 
-	    private Label createDataThresholdLabel(int priorValue, int value) {
-	      final Label label = new Label(value + "");
-	      label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
-	      label.setStyle("-fx-font-size: 20; -fx-font-weight: bold;");
-
-	      if (priorValue == 0) {
-	        label.setTextFill(Color.DARKGRAY);
-	      } else if (value > priorValue) {
-	        label.setTextFill(Color.FORESTGREEN);
-	      } else {
-	        label.setTextFill(Color.FIREBRICK);
-	      }
-
-	      label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
-	      return label;
+	            	alert.showAndWait();
+		        }
+	      });
 	    }
 	  }
 
