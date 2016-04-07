@@ -1,13 +1,13 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-
-//import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import javafx.application.Application;
@@ -37,7 +37,6 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.input.KeyCode;
@@ -50,7 +49,7 @@ import javafx.scene.layout.StackPane;
 
 /*
  * GUI for PLM Analyzer system
- * @version 2016_04_06
+ * @version 2016_04_07
  * @author Jennifer Hunter
  */
 @SuppressWarnings("restriction")
@@ -230,7 +229,7 @@ public class Main extends Application {
 			public void handle(ActionEvent t) {
 				   // Open a file choose dialog to decide which file to open
 				   FileChooser fileChooser = new FileChooser();
-				   fileChooser.setTitle("Open File");
+				   fileChooser.setTitle("Open Data File");
 				   fileChooser.getExtensionFilters().addAll(
 						   // Only look for text files and csv files
 			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
@@ -379,14 +378,39 @@ public class Main extends Application {
 		 open.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
 		 
 		// Save As
-		 MenuItem saveAs = new MenuItem("Save As");
+		 MenuItem saveAs = new MenuItem("Save Analysis As");
 		 saveAs.setOnAction(new EventHandler<ActionEvent>() {
 			   public void handle(ActionEvent t) {
 				   // Open a file chooser to decide where to save the file
 				   FileChooser fileChooser1 = new FileChooser();
 				   fileChooser1.setTitle("Save As");
+				 //Set extension filter
+		              FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("TXT files (*.txt)", "*.txt");
+		              fileChooser1.getExtensionFilters().add(extFilter);
 				   File saveFile = fileChooser1.showSaveDialog(stage);
-	  	     }
+				  
+			       if (saveFile != null){
+			    	   BufferedWriter writer = null;
+					   try {
+				            // Initialize the writer for the given save file
+				            writer = new BufferedWriter(new FileWriter(saveFile));
+				            // Write the header
+				            writer.write("StartTimestamp,EventType,Str(g),Duration(s),Interval(s),IsLegDown,RejectionReason");
+				            // For each movement, print the movement details
+				            for (Movement m: mov) {
+				            	writer.write("\r\n" + m.toString());
+				            }
+				        } catch (Exception e) {
+				            e.printStackTrace();
+				        } finally {
+				            try {
+				                // Close the writer regardless of what happens
+				                writer.close();
+				            } catch (Exception e) {
+				            }
+				        }
+				       }
+			   }
 		 });
 		 file.getItems().add(saveAs);
 		 // Ctrl + S to save the analysis movement list to a file
@@ -400,7 +424,7 @@ public class Main extends Application {
 			public void handle(ActionEvent t) {
 				// Open a file choose dialog to decide which file to open
 				   FileChooser fileChooser = new FileChooser();
-				   fileChooser.setTitle("Open File");
+				   fileChooser.setTitle("Import Analysis File");
 				   fileChooser.getExtensionFilters().addAll(
 						   // Only look for text files and csv files
 			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
@@ -624,6 +648,7 @@ public class Main extends Application {
 	                new BufferedReader(fileReader);
 
 	            try {
+	            	data.clear();
 		            while((line = bufferedReader.readLine()) != null) {
 		                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
 		                // 01234567890123456789012345678901234567890123456789012
@@ -698,6 +723,7 @@ public class Main extends Application {
 	            BufferedReader bufferedReader = 
 	                new BufferedReader(fileReader);
 	            try {
+	            	mov.clear();
 		            while((line = bufferedReader.readLine()) != null) {
 		                // YYYY-MM-DD hh:mm:ss.sss,E,strG,duraS,intvS,d,
 		                // 01234567890123456789012345678901234567890123456789012
