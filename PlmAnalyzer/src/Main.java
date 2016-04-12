@@ -232,8 +232,8 @@ public class Main extends Application {
 				   fileChooser.setTitle("Open Data File");
 				   fileChooser.getExtensionFilters().addAll(
 						   // Only look for text files and csv files
-			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
-			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
+						   new FileChooser.ExtensionFilter("CSV", "*.csv"),
+			                new FileChooser.ExtensionFilter("TXT", "*.txt*"));
 				   File openFile =  fileChooser.showOpenDialog(stage);
 				   if (openFile != null && openFile.exists()) { 
 					   // Remove the old chart and slider from the GUI
@@ -427,8 +427,8 @@ public class Main extends Application {
 				   fileChooser.setTitle("Import Analysis File");
 				   fileChooser.getExtensionFilters().addAll(
 						   // Only look for text files and csv files
-			                new FileChooser.ExtensionFilter("TXT", "*.txt*"),
-			                new FileChooser.ExtensionFilter("CSV", "*.csv"));
+						   new FileChooser.ExtensionFilter("TXT", "*.txt*"),
+						   new FileChooser.ExtensionFilter("CSV", "*.csv"));
 				   File analysisFile =  fileChooser.showOpenDialog(stage);
 				   if (analysisFile != null && analysisFile.exists() & !data.isEmpty()) { 
 	                	// Extract the data from the csv
@@ -602,6 +602,13 @@ public class Main extends Application {
 	  	 MenuItem disp = new MenuItem("Set Display Paramters");
 	  	 disp.setOnAction(new EventHandler<ActionEvent>() {
 	  	     public void handle(ActionEvent t) {
+	  	    	// Open a dialog to allow the user to set display parameters
+	  	    	// Paramters = y-max, y-min, timescale (screen capacity)
+	  	    	Alert alert = new Alert(AlertType.INFORMATION);
+            	alert.setTitle("Movement Information");
+            	alert.setHeaderText("Movement Details");
+            	alert.setContentText("");
+            	alert.showAndWait();
 	  	     }
 	  	 });
 	  	 paramSetup.getItems().add(disp);
@@ -653,11 +660,15 @@ public class Main extends Application {
 		                // YYYY-MM-DD hh:mm:ss.sss,accx,accy,accz,gyrx,gyry,gyrz
 		                // 01234567890123456789012345678901234567890123456789012
 		                
-		                String[] value = line.split("");
+		                String[] value = line.split(",");
+		                String date = value [0];
+		                for (String v: value) {
+		                	System.out.println(v);
+		                }
 		                // Check if the first value is a number = not title 
 		            	boolean ret = true;
 		                try {
-		                    Double.parseDouble(value[0]);
+		                    Double.parseDouble(Character.toString(date.charAt(0)));
 	
 		                }catch (NumberFormatException e) {
 		                    ret = false;
@@ -666,21 +677,27 @@ public class Main extends Application {
 		            	if (ret) {
 			                Calendar event = Calendar.getInstance();
 			                // Parse the values for the date
-			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
-			                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
-			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
-			                		Integer.parseInt(value[17] + value[18]));
-			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
+			                event.set(Integer.parseInt(Character.toString(date.charAt(0)) + Character.toString(date.charAt(1))
+			                	+ Character.toString(date.charAt(2)) + Character.toString(date.charAt(3))),
+			                		Integer.parseInt(Character.toString(date.charAt(5)) + Character.toString(date.charAt(6))),
+			                		Integer.parseInt(Character.toString(date.charAt(8)) + Character.toString(date.charAt(9))),
+			                		Integer.parseInt(Character.toString(date.charAt(11)) + Character.toString(date.charAt(12))),
+			                		Integer.parseInt(Character.toString(date.charAt(14)) + Character.toString(date.charAt(15))), 
+			                		Integer.parseInt(Character.toString(date.charAt(17)) + Character.toString(date.charAt(18))));
+			                event.set(Calendar.MILLISECOND, Integer.parseInt(Character.toString(date.charAt(20))
+			                		+ Character.toString(date.charAt(21)) + Character.toString(date.charAt(22))));
 			                // Parse the accelerometer and gyroscope values
-			                double ax = Double.parseDouble(value[24] + value[25] + value[26] + value[27]);
-			                double ay = Double.parseDouble(value[29] + value[30] + value[31] + value[32]);
-			                double az = Double.parseDouble(value[34] + value[35] + value[36] + value[37]);
-			                double gx = Double.parseDouble(value[39] + value[40] + value[41] + value[42]);
-			                double gy = Double.parseDouble(value[44] + value[45] + value[46] + value[47]);
-			                double gz = Double.parseDouble(value[49] + value[50] + value[51] + value[52]);
+			                double accGyro[] = new double[6];
+			                for(int i = 1; i < accGyro.length; i++) {
+			                	// Parse the data
+			                	accGyro[i - 1] = Double.parseDouble(value[i]);
+			                }
+			                
 			                // Get the magnitudes for the accelerometer and gyroscope
-			                double accel = Math.sqrt(ax*ax + ay*ay + az*az);
-			                double gyro = Math.sqrt(gx*gx + gy*gy + gz*gz);
+			                double accel = Math.sqrt(accGyro[0]*accGyro[0] + accGyro[1]*accGyro[1]
+			                		+ accGyro[2]*accGyro[2]);
+			                double gyro = Math.sqrt(accGyro[3]*accGyro[3] + accGyro[4]*accGyro[4]
+			                		+ accGyro[5]*accGyro[5]);
 			                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
 			            }   
 		            }

@@ -136,7 +136,7 @@ public class Movement {
 		   // Format for dates on x-axis
 		   SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		   String inv = (this.getInterval() == Double.POSITIVE_INFINITY)?"inf ": String.format("%.3f", this.getInterval());
-		   String ret = String.format("%s,%s,%.2f,%.3f,%s,%s,%s", String.format(dateFormat.format(this.getTime())), 
+		   String ret = String.format("%s,%s,%.2f,%.3f,%s,%s,%s", dateFormat.format(this.getTime()), 
 				   this.getType(), this.getStr(), this.getDur(), inv, this.getDown() , this.getReason());
 	       return ret;
 	   }
