@@ -8,8 +8,11 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -27,6 +30,8 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
@@ -46,6 +51,7 @@ import javafx.collections.*;
 import javafx.scene.*;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.GridPane;
 
 /*
  * GUI for PLM Analyzer system
@@ -601,14 +607,157 @@ public class Main extends Application {
 	  	 // Display Paramters
 	  	 MenuItem disp = new MenuItem("Set Display Paramters");
 	  	 disp.setOnAction(new EventHandler<ActionEvent>() {
-	  	     public void handle(ActionEvent t) {
+	  	     @SuppressWarnings("unchecked")
+			public void handle(ActionEvent t) {
 	  	    	// Open a dialog to allow the user to set display parameters
 	  	    	// Paramters = y-max, y-min, timescale (screen capacity)
-	  	    	Alert alert = new Alert(AlertType.INFORMATION);
-            	alert.setTitle("Movement Information");
-            	alert.setHeaderText("Movement Details");
-            	alert.setContentText("");
-            	alert.showAndWait();
+	  	    // Create the custom dialog.
+	  	    	Dialog<List<Object>> dialog = new Dialog<>();
+	  	    	dialog.setTitle("Display Setup Dialog");
+	  	    	dialog.setHeaderText("Adjust the display paramters for the chart.");
+
+	  	    	// Set the button types.
+	  	    	dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+	  	    	// Create the slider fields for adjusting the parameters
+	  	    	GridPane grid = new GridPane();
+	  	    	grid.setHgap(10);
+	  	    	grid.setVgap(10);
+	  	    	grid.setPadding(new Insets(20, 50, 10, 10));
+
+	  	    	// Create sliders for the ymin and ymax values
+	  	    	Slider ymin = new Slider(0, 10, 5);
+	  	    	ymin.setShowTickMarks(true);
+	  	    	ymin.setShowTickLabels(true);
+	  	    	ymin.setMajorTickUnit(1.0f);
+	  	    	ymin.setPrefWidth(300);
+	  	    	Slider ymax = new Slider(0, 10, 5);
+	  	    	ymax.setShowTickMarks(true);
+	  	    	ymax.setShowTickLabels(true);
+	  	    	ymax.setMajorTickUnit(1.0f);
+	  	    	ymax.setPrefWidth(300);
+	  	    	
+	  	    	//Create and bind text values to the slider values
+	  	    	// Ymin
+	  	        final Label yminText = new Label();
+	  	        yminText.setText(String.format("%.2f", ymin.getValue()));
+	  	        ymin.valueProperty().addListener(new ChangeListener<Number>() {
+	  	        @Override public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
+	  	          if (newValue == null) {
+	  	        	yminText.setText("");
+	  	            return;
+	  	          }
+	  	          yminText.setText(String.format("%.2f", newValue));
+	  	        }
+	  	        });
+	  	        yminText.setPrefWidth(50);
+	  	        // Ymax
+	  	        final Label ymaxText = new Label();
+	  	        ymaxText.setText(String.format("%.2f", ymax.getValue()));
+	  	        ymax.valueProperty().addListener(new ChangeListener<Number>() {
+	  	        @Override public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
+	  	          if (newValue == null) {
+	  	        	ymaxText.setText("");
+	  	            return;
+	  	          }
+	  	          ymaxText.setText(String.format("%.2f", newValue));
+	  	        }
+	  	        });
+	  	        ymaxText.setPrefWidth(50);
+	  	        
+	  	        // Create a slider for the screen capacity
+	  	        Slider cap = new Slider(1, data.size(), screenCapacity);
+	  	    	cap.setShowTickMarks(true);
+	  	    	cap.setShowTickLabels(true);
+	  	    	cap.setMajorTickUnit(5.0f);
+	  	    	cap.setPrefWidth(300);
+	  	    	
+	  	    	//Create and bind text values to the slider values
+	  	    	// Chart capacity
+	  	        final Label capText = new Label();
+	  	        capText.setText(Math.round(cap.getValue()) + "");
+	  	        cap.valueProperty().addListener(new ChangeListener<Number>() {
+	  	        @Override public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
+	  	          if (newValue == null) {
+	  	        	capText.setText("");
+	  	            return;
+	  	          }
+	  	          capText.setText(Math.round(cap.getValue()) + "");
+	  	        }
+	  	        });
+	  	        capText.setPrefWidth(50);
+	  
+	  	        // Add the components to the grid of the dialog box
+	  	    	grid.add(new Label("Min Force Displayed on Chart:"), 0, 0);
+	  	    	grid.add(ymin, 1, 0);
+	  	    	grid.add(yminText, 2, 0);
+	  	    	grid.add(new Label("Max Force Displayed on Chart:"), 0, 1);
+	  	    	grid.add(ymax, 1, 1);
+	  	    	grid.add(ymaxText, 2, 1);
+	  	    	grid.add(new Label("Data Points Shown on Screen:"), 0, 2);
+	  	    	grid.add(cap, 1, 2);
+	  	    	grid.add(capText, 2, 2);
+
+	  	    	dialog.getDialogPane().setContent(grid);
+
+	  	    	// Convert the result to a username-password-pair when the login button is clicked.
+	  	    	dialog.setResultConverter(dialogButton -> {
+	  	    	    if (dialogButton == ButtonType.OK) {
+	  	    	    	List<Object> res = new ArrayList<Object>();
+	  	    	    	res.add(ymin.getValue());
+	  	    	    	res.add(ymax.getValue());
+	  	    	    	res.add(Math.round(cap.getValue()));
+	  	    	        return res;
+	  	    	    }
+	  	    	    return null;
+	  	    	});
+
+	  	    	dialog.showAndWait().ifPresent(res -> {
+	  	    	     if (res != null && !res.isEmpty()) {
+	  	    	    	System.out.println("Ymin=" + res.get(0) + ", Ymax=" + res.get(1)
+		  	    	    + ", Screen Capacity=" + res.get(2));
+	  	    	    	
+	  	    	        // Get an updated reference of the chart on the graph
+	            		LineChart<Date,Number> c = (LineChart<Date,Number>) content.lookup("#chart");
+	  	    	        if (c != null) {
+		            		// Set the upper and lower bounds of the chart
+	  	    	        	// Y Axis
+				            ((NumberAxis)c.getYAxis()).setUpperBound((double) res.get(1));
+				            ((NumberAxis)c.getYAxis()).setLowerBound((double) res.get(0));
+				            // X Axis
+				            //Set the screen capacity
+				            screenCapacity = ((Long)res.get(2)).intValue();
+				            // Get references to the series on the chart and its data
+				            LineChart.Series<Date, Number> s = (LineChart.Series<Date, Number>) c.getData().get(0);
+		            		ObservableList<LineChart.Data <Date,Number>> chartData = s.getData();
+		            		// Set the max slider value of the slider
+		            		int max = chartData.size() == 0? 0: chartData.size() - 1;
+		            		double newVal = chartData.size() - 1;
+				            // the upper bound is the max point
+				            int up = (int) Math.round(newVal);
+				            // the lower bound is the max point value minus the screen capacity
+				            int low = (int) Math.round(newVal) - screenCapacity;
+				            // If the lower bound is less than 0, set it to 0
+				            low = (low < 0)? 0 : low;
+				            // If the lower bound is greater than max - screen capacity,
+				            // set it equal to the max slider value - screen capacity
+				            low = (low > max - screenCapacity)? 
+				            		max - screenCapacity : low;
+				            // If the upper bound, is less than the screen capacity,
+				            // set it to the screen capacity
+				            up = (up < screenCapacity)? screenCapacity : up;
+				
+				            // Get the date values for the bounds
+				            Date upper = chartData.get(up).getXValue();
+				            Date lower = chartData.get(low).getXValue();
+				
+				            // Set the upper and lower bounds of the chart
+				            ((DateAxis)c.getXAxis()).setUpperBound(upper);
+				            ((DateAxis)c.getXAxis()).setLowerBound(lower);
+				            
+	  	    	        }
+	  	    	     }
+	  	    	 });
 	  	     }
 	  	 });
 	  	 paramSetup.getItems().add(disp);
@@ -662,9 +811,7 @@ public class Main extends Application {
 		                
 		                String[] value = line.split(",");
 		                String date = value [0];
-		                for (String v: value) {
-		                	System.out.println(v);
-		                }
+
 		                // Check if the first value is a number = not title 
 		            	boolean ret = true;
 		                try {
@@ -696,8 +843,8 @@ public class Main extends Application {
 			                // Get the magnitudes for the accelerometer and gyroscope
 			                double accel = Math.sqrt(accGyro[0]*accGyro[0] + accGyro[1]*accGyro[1]
 			                		+ accGyro[2]*accGyro[2]);
-			                double gyro = Math.sqrt(accGyro[3]*accGyro[3] + accGyro[4]*accGyro[4]
-			                		+ accGyro[5]*accGyro[5]);
+			                //double gyro = Math.sqrt(accGyro[3]*accGyro[3] + accGyro[4]*accGyro[4]
+			                //		+ accGyro[5]*accGyro[5]);
 			                data.add(new XYChart.Data<Date, Number>(event.getTime(), accel));
 			            }   
 		            }
