@@ -25,6 +25,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.LineChart;
 import javafx.scene.control.Menu;
+import javafx.scene.control.Button;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.MenuBar;
@@ -595,14 +596,68 @@ public class Main extends Application {
 	   */
 	public void setupParamSetup() {
 	  	 // Set PLM Paramters
-	  	 MenuItem setPLM = new MenuItem("Set PLM Paramters");
-	  	 setPLM.setOnAction(new EventHandler<ActionEvent>() {
+	  	 MenuItem setSleep = new MenuItem("Set Sleep Periods");
+	  	 setSleep.setOnAction(new EventHandler<ActionEvent>() {
 	  	     public void handle(ActionEvent t) {
+	  	    // Open a dialog to allow the user to set display parameters
+		  	    	// Paramters = y-max, y-min, timescale (screen capacity)
+		  	    	// Create the custom dialog.
+		  	    	Dialog<List<Object>> dialog = new Dialog<>();
+		  	    	dialog.setTitle("Set Sleep Periods");
+		  	    	dialog.setHeaderText("Select the sleep periods you wish to score.");
+
+		  	    	// Set the button types.
+		  	    	dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+		  	    	// Create the slider fields for adjusting the parameters
+		  	    	GridPane grid = new GridPane();
+		  	    	grid.setHgap(10);
+		  	    	grid.setVgap(10);
+		  	    	grid.setPadding(new Insets(20, 50, 10, 10));
+		  	    	
+		  	    	// Create Button for 
+
+		  	        // Add the components to the grid of the dialog box
+		  	    	grid.add(new Label("Sleep Period 1:"), 0, 0);
+		  	    	//grid.add(ymin, 1, 0);
+		  	    	//grid.add(yminText, 2, 0);
+		  	    	grid.add(new Label("Sleep Period 2:"), 0, 1);
+		  	    	//grid.add(ymax, 1, 1);
+		  	    	//grid.add(ymaxText, 2, 1);
+		  	    	grid.add(new Label("Sleep Period 3:"), 0, 2);
+		  	    	//grid.add(cap, 1, 2);
+		  	    	//grid.add(capText, 2, 2);
+		  	    	grid.add(new Label("Sleep Period 4:"), 0, 3);
+		  	    	//grid.add(cap, 1, 3);
+		  	    	//grid.add(capText, 2, 3);
+		  	    	grid.add(new Label("Sleep Period 5:"), 0, 4);
+		  	    	//grid.add(cap, 1, 4);
+		  	    	//grid.add(capText, 2, 4);
+
+		  	    	dialog.getDialogPane().setContent(grid);
+
+		  	    	// Convert the result to a username-password-pair when the login button is clicked.
+		  	    	dialog.setResultConverter(dialogButton -> {
+		  	    	    if (dialogButton == ButtonType.OK) {
+		  	    	    	List<Object> res = new ArrayList<Object>();
+		  	    	    	//res.add(ymin.getValue());
+		  	    	    	//res.add(ymax.getValue());
+		  	    	    	//res.add(Math.round(cap.getValue()));
+		  	    	        return res;
+		  	    	    }
+		  	    	    return null;
+		  	    	});
+
+		  	    	dialog.showAndWait().ifPresent(res -> {
+		  	    	     if (res != null && !res.isEmpty()) {
+		  	    	     }
+		  	    	});
+		  	    	
 	  	     }
 	  	 });
-	  	 paramSetup.getItems().add(setPLM);
+	  	 paramSetup.getItems().add(setSleep);
 	  	 //Setup Ctrl+P to activate setPLM
-	  	 setPLM.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
+	  	 setSleep.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
 	  	 
 	  	 // Display Paramters
 	  	 MenuItem disp = new MenuItem("Set Display Paramters");
@@ -611,7 +666,7 @@ public class Main extends Application {
 			public void handle(ActionEvent t) {
 	  	    	// Open a dialog to allow the user to set display parameters
 	  	    	// Paramters = y-max, y-min, timescale (screen capacity)
-	  	    // Create the custom dialog.
+	  	    	// Create the custom dialog.
 	  	    	Dialog<List<Object>> dialog = new Dialog<>();
 	  	    	dialog.setTitle("Display Setup Dialog");
 	  	    	dialog.setHeaderText("Adjust the display paramters for the chart.");
@@ -714,16 +769,15 @@ public class Main extends Application {
 
 	  	    	dialog.showAndWait().ifPresent(res -> {
 	  	    	     if (res != null && !res.isEmpty()) {
-	  	    	    	System.out.println("Ymin=" + res.get(0) + ", Ymax=" + res.get(1)
-		  	    	    + ", Screen Capacity=" + res.get(2));
-	  	    	    	
 	  	    	        // Get an updated reference of the chart on the graph
 	            		LineChart<Date,Number> c = (LineChart<Date,Number>) content.lookup("#chart");
 	  	    	        if (c != null) {
 		            		// Set the upper and lower bounds of the chart
 	  	    	        	// Y Axis
-				            ((NumberAxis)c.getYAxis()).setUpperBound((double) res.get(1));
-				            ((NumberAxis)c.getYAxis()).setLowerBound((double) res.get(0));
+	  	    	        	NumberAxis y = ((NumberAxis)c.getYAxis());
+	  	    	        	y.setAutoRanging(false);
+				            y.setUpperBound((double) res.get(1));
+				            y.setLowerBound((double) res.get(0));
 				            // X Axis
 				            //Set the screen capacity
 				            screenCapacity = ((Long)res.get(2)).intValue();
