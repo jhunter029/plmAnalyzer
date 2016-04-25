@@ -4,7 +4,6 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.util.StringConverter;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -14,9 +13,9 @@ import java.time.format.DateTimeFormatter;
  * A DateTimePicker with configurable datetime format where both date and time can be changed
  * via the text field and the date can additionally be changed via the JavaFX default date picker.
  */
-@SuppressWarnings({"restriction" })
+
 public class DateTimePicker extends DatePicker {
-	public static final String DefaultFormat = "yyyy-MM-dd HH:mm";
+	public static final String DefaultFormat = "yyyy-MM-dd HH:mm:ss.SSS";
 
 	private DateTimeFormatter formatter;
 	private ObjectProperty<LocalDateTime> dateTimeValue = new SimpleObjectProperty<>(LocalDateTime.now());

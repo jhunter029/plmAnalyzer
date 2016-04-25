@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,6 +42,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
@@ -90,6 +92,12 @@ public class Main extends Application {
 	private VBox content;
 	// Reference to the borderpane
 	private BorderPane borderpane;
+	// Night count for report
+	private int night;
+	// Stage reference variable
+	private Stage primary;
+	// Dyncamic values for report dialog width and height
+	private int h;
 	
 	//private XYChart.Series<Date, Number> threshold;
 	    
@@ -100,6 +108,8 @@ public class Main extends Application {
 	*/
 	@SuppressWarnings({ "unchecked", "rawtypes"})
 	public void start(Stage stage) {
+		// Set the stage
+		primary = stage;
 		// Store the raw data points in an observable array list
 		data = FXCollections.observableArrayList();
 		// Store the analyzed movement data in an observable array list
@@ -594,71 +604,7 @@ public class Main extends Application {
 	  /**
 	   * Initialize Menu Items for the paramSetup menu
 	   */
-	public void setupParamSetup() {
-	  	 // Set PLM Paramters
-	  	 MenuItem setSleep = new MenuItem("Set Sleep Periods");
-	  	 setSleep.setOnAction(new EventHandler<ActionEvent>() {
-	  	     public void handle(ActionEvent t) {
-	  	    // Open a dialog to allow the user to set display parameters
-		  	    	// Paramters = y-max, y-min, timescale (screen capacity)
-		  	    	// Create the custom dialog.
-		  	    	Dialog<List<Object>> dialog = new Dialog<>();
-		  	    	dialog.setTitle("Set Sleep Periods");
-		  	    	dialog.setHeaderText("Select the sleep periods you wish to score.");
-
-		  	    	// Set the button types.
-		  	    	dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-		  	    	// Create the slider fields for adjusting the parameters
-		  	    	GridPane grid = new GridPane();
-		  	    	grid.setHgap(10);
-		  	    	grid.setVgap(10);
-		  	    	grid.setPadding(new Insets(20, 50, 10, 10));
-		  	    	
-		  	    	// Create Button for 
-
-		  	        // Add the components to the grid of the dialog box
-		  	    	grid.add(new Label("Sleep Period 1:"), 0, 0);
-		  	    	//grid.add(ymin, 1, 0);
-		  	    	//grid.add(yminText, 2, 0);
-		  	    	grid.add(new Label("Sleep Period 2:"), 0, 1);
-		  	    	//grid.add(ymax, 1, 1);
-		  	    	//grid.add(ymaxText, 2, 1);
-		  	    	grid.add(new Label("Sleep Period 3:"), 0, 2);
-		  	    	//grid.add(cap, 1, 2);
-		  	    	//grid.add(capText, 2, 2);
-		  	    	grid.add(new Label("Sleep Period 4:"), 0, 3);
-		  	    	//grid.add(cap, 1, 3);
-		  	    	//grid.add(capText, 2, 3);
-		  	    	grid.add(new Label("Sleep Period 5:"), 0, 4);
-		  	    	//grid.add(cap, 1, 4);
-		  	    	//grid.add(capText, 2, 4);
-
-		  	    	dialog.getDialogPane().setContent(grid);
-
-		  	    	// Convert the result to a username-password-pair when the login button is clicked.
-		  	    	dialog.setResultConverter(dialogButton -> {
-		  	    	    if (dialogButton == ButtonType.OK) {
-		  	    	    	List<Object> res = new ArrayList<Object>();
-		  	    	    	//res.add(ymin.getValue());
-		  	    	    	//res.add(ymax.getValue());
-		  	    	    	//res.add(Math.round(cap.getValue()));
-		  	    	        return res;
-		  	    	    }
-		  	    	    return null;
-		  	    	});
-
-		  	    	dialog.showAndWait().ifPresent(res -> {
-		  	    	     if (res != null && !res.isEmpty()) {
-		  	    	     }
-		  	    	});
-		  	    	
-	  	     }
-	  	 });
-	  	 paramSetup.getItems().add(setSleep);
-	  	 //Setup Ctrl+P to activate setPLM
-	  	 setSleep.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
-	  	 
+	public void setupParamSetup() {  	 
 	  	 // Display Paramters
 	  	 MenuItem disp = new MenuItem("Set Display Paramters");
 	  	 disp.setOnAction(new EventHandler<ActionEvent>() {
@@ -822,22 +768,152 @@ public class Main extends Application {
    /**
     * Initialize Menu Items for the reports menu
     */
-	public void setupReports() {
-	   	 // Events
-	   	 MenuItem events = new MenuItem("Events");
-	   	 events.setOnAction(new EventHandler<ActionEvent>() {
-	   		   public void handle(ActionEvent t) {
-	     	     }
-	   	 });
-	   	 reports.getItems().add(events);
-	   	 
-	   	 // Summary
-	   	 MenuItem summaries = new MenuItem("Summary");
-	   	 summaries.setOnAction(new EventHandler<ActionEvent>() {
-	   	     public void handle(ActionEvent t) {
-	   	     }
-	   	 });
-	   	 reports.getItems().add(summaries);
+	public void setupReports() {   	 
+	     // Sleep Report
+	  	 MenuItem setSleep = new MenuItem("Nightly Report");
+	  	 setSleep.setOnAction(new EventHandler<ActionEvent>() {
+	  	     public void handle(ActionEvent t) {
+	  	    	 
+	  	    // Open a dialog to allow the user to set display parameters
+		  	    	// Paramters = y-max, y-min, timescale (screen capacity)
+		  	    	// Create the custom dialog.
+		  	    	Dialog<List<Object>> dialog = new Dialog<>();
+		  	    	dialog.initModality(Modality.NONE);
+		  	    	dialog.initOwner(primary);
+		  	    	dialog.setTitle("Nightly Report");
+		  	    	dialog.setHeaderText("Select the sleep periods you wish to score.");
+
+		  	    	// Set the button types.
+		  	    	//ButtonType apply = new ButtonType("Apply", null);
+		  	    	dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
+
+		  	    	// Create the slider fields for adjusting the parameters
+		  	    	GridPane grid = new GridPane();
+		  	    	grid.setHgap(10);
+		  	    	grid.setVgap(10);
+		  	    	grid.setPadding(new Insets(20, 50, 10, 10));
+		  	    	// Make the dialog dynamically grow as things are added
+		  	    	h=300;
+		  	    	grid.setPrefSize(700,h);
+		  	    	
+		  	    	// Set incremental variables
+		  	    	night = 0;
+		  	    	List<Label> nightText = new ArrayList<Label>();
+		  	    	List<List<DateTimePicker>> sleepTimes = new ArrayList<List<DateTimePicker>>();
+		  	    	List<Button> buttons = new ArrayList<Button>();
+		  	    	
+		  	    	// Add night button
+		  	    	Button addNight = new Button("Add Sleep Period");
+		  	    	addNight.setOnAction(new EventHandler<ActionEvent>() {
+						public void handle(ActionEvent event) {
+					    // Grow doalog
+						h+=100;
+						grid.setPrefHeight(h);
+			  	    	// Add first night automatically
+			  	    	nightText.add(night, new Label("Night " + (night + 1) + " (From - To): "));
+			  	    	// Make two text boxes to hold from and to dates - open DateTimePicker onClick
+			  	        sleepTimes.add(night,new ArrayList<DateTimePicker>()); 
+			  	        sleepTimes.get(night).add(0, new DateTimePicker());
+			  	        sleepTimes.get(night).add(1, new DateTimePicker());	
+			  	        
+			  	        // Button View Chart
+			  	        buttons.add(night, new Button ("View Chart"));
+				  	    buttons.get(night).setOnAction(new EventHandler<ActionEvent>() {
+							public void handle(ActionEvent event) {
+								
+								// 2016-05-13 13:54:31.000
+				  	        	int n = buttons.indexOf(event.getSource());
+				  	        	
+								// Create the custom dialog.
+								Dialog<Void> dia = new Dialog<>();
+								dia.setTitle("Night " + (n+1));
+								dia.setHeaderText("Data for Night " + (n+1));
+								dia.initModality(Modality.NONE);
+								dia.initOwner(primary);
+								
+								VBox vb = new VBox();
+								
+				  	        	// Get the dates from the DateTimePickers
+				  	        	LocalDateTime s = sleepTimes.get(n).get(0).getDateTimeValue();
+				  	        	LocalDateTime e = sleepTimes.get(n).get(0).getDateTimeValue();
+				  	        	// Define the axes
+							    DateAxis x = new DateAxis();
+							    NumberAxis y = new NumberAxis(0, 7, 1);
+							    
+							    // Name the axes
+							    x.setLabel("Time");
+							    y.setLabel("Force (g)");
+							    
+							    // Format the axes
+							    x.setAutoRanging(false);
+							    y.setAutoRanging(true);
+							    
+							    // Update the bounds using the datetimepicker valies
+							    Calendar cal = Calendar.getInstance();
+							    // Get the "from" date
+							    cal.set(s.getYear(), s.getMonthValue(), s.getDayOfMonth(), s.getHour(), s.getMinute(), s.getSecond());
+							    cal.set(Calendar.MILLISECOND, s.getNano()*1000);
+							    Date start = cal.getTime();
+							    // Get the "to" date
+							    cal.set(e.getYear(), e.getMonthValue(), e.getDayOfMonth(), e.getHour(), e.getMinute(), e.getSecond());
+							    cal.set(Calendar.MILLISECOND, e.getNano()*1000);
+								Date end = cal.getTime();
+								// Set the bounds
+								x.setUpperBound(end);
+								x.setLowerBound(start);
+							    
+								// Create a new chart
+				  	        	LineChart<Date, Number> charts = new LineChart<Date, Number>(x, y);
+				  	        	
+							    // Set chart title
+							    charts.setTitle("Night " + (n + 1));
+							    // Turn off symbols
+							    charts.setCreateSymbols(false);
+							    // Hide the chart legend
+							    charts.setLegendVisible(false); 
+							    // Make the horizontal grid lines visible for easier reference
+							    charts.setHorizontalGridLinesVisible(true);
+							    // Turn off animation
+							    charts.setAnimated(false);
+	
+						        // Add a series based off the data
+							    charts.getData().add(new LineChart.Series<Date, Number>(data));
+						   	    // Change the cursor to a crosshair when on the chart
+							    charts.setCursor(Cursor.CROSSHAIR);	
+							    // Bring the chart to the front of the scene
+							    charts.toFront();
+							    // Add to the dialog box
+							    vb.getChildren().add(charts);
+							    
+							    System.out.println(charts.getData().get(0).getData());
+							    
+							    dia.getDialogPane().setContent(vb);
+							    dia.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
+							    dia.showAndWait();
+							    
+							    
+				  	        }
+				  	   });
+			  	        
+			  	    	// Add the components to the grid of the dialog box
+			  	        grid.add(nightText.get(night), 0, night + 1);
+			  	        grid.add(sleepTimes.get(night).get(0), 1, night + 1);
+			  	    	grid.add(sleepTimes.get(night).get(1), 2, night + 1);
+			  	    	grid.add(buttons.get(night), 3, night + 1);
+			  	    	
+			  	    	night++;
+						}
+					});
+		  	    	grid.add(addNight, 0, 0);
+		  	    	
+		  	    	dialog.getDialogPane().setContent(grid);
+		  	    	dialog.showAndWait();
+		  	    	
+	  	     }
+	  	 });
+	  	 reports.getItems().add(setSleep);
+	  	 //Setup Ctrl+P to activate setPLM
+	  	 setSleep.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
 	}
 	  
 	 /**

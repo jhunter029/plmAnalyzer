@@ -8,6 +8,7 @@
 		<item value="false" key="wrap"/>
 		<item value="false" key="wholeword"/>
 		<list key="findhistory">
+			<item value="remove"/>
 			<item value="System.out.println"/>
 			<item value="float"/>
 			<item value="skin"/>
@@ -15,7 +16,6 @@
 			<item value="Date"/>
 			<item value="Y"/>
 			<item value="X"/>
-			<item value="Data"/>
 		</list>
 		<list key="replacehistory">
 			<item value="date"/>
