@@ -192,7 +192,7 @@ public class Main extends Application {
 	    // Add spacing between the children
 	    content.setSpacing(15.0);
 	    // Add the dataPoint text, the charts, the slider, the table, and the analyze button
-	    content.getChildren().addAll(dataPoint, ephText, chart);
+	    content.getChildren().addAll(dataPoint, chart);
 	    VBox.setVgrow(chart, Priority.ALWAYS);
 	    
 	    // Add the menu to the top of the GUI
@@ -794,12 +794,13 @@ public class Main extends Application {
 		  	    	grid.setPadding(new Insets(20, 50, 10, 10));
 		  	    	// Make the dialog dynamically grow as things are added
 		  	    	h=300;
-		  	    	grid.setPrefSize(700,h);
+		  	    	grid.setPrefSize(750,h);
 		  	    	
 		  	    	// Set incremental variables
 		  	    	night = 0;
 		  	    	List<Label> nightText = new ArrayList<Label>();
 		  	    	List<List<DateTimePicker>> sleepTimes = new ArrayList<List<DateTimePicker>>();
+		  	    	List<Label> ephNightText = new ArrayList<Label>();
 		  	    	List<Button> buttons = new ArrayList<Button>();
 		  	    	
 		  	    	// Add night button
@@ -815,13 +816,14 @@ public class Main extends Application {
 			  	        sleepTimes.add(night,new ArrayList<DateTimePicker>()); 
 			  	        sleepTimes.get(night).add(0, new DateTimePicker());
 			  	        sleepTimes.get(night).add(1, new DateTimePicker());	
-			  	        
+			  	        // Add EPH text
+			  	        ephNightText.add(night, new Label("Events Per Hour: "));
 			  	        // Button View Chart
 			  	        buttons.add(night, new Button ("View Chart"));
 				  	    buttons.get(night).setOnAction(new EventHandler<ActionEvent>() {
 							public void handle(ActionEvent event) {
 								
-								// 2016-05-13 13:54:31.000
+								// 2016-04-13 13:54:31.000
 				  	        	int n = buttons.indexOf(event.getSource());
 				  	        	
 								// Create the custom dialog.
@@ -835,7 +837,10 @@ public class Main extends Application {
 								
 				  	        	// Get the dates from the DateTimePickers
 				  	        	LocalDateTime s = sleepTimes.get(n).get(0).getDateTimeValue();
-				  	        	LocalDateTime e = sleepTimes.get(n).get(0).getDateTimeValue();
+				  	        	LocalDateTime e = sleepTimes.get(n).get(1).getDateTimeValue();
+				  	        	// debug
+				  	        	System.out.println(s);
+				  	        	System.out.println(e);
 				  	        	// Define the axes
 							    DateAxis x = new DateAxis();
 							    NumberAxis y = new NumberAxis(0, 7, 1);
@@ -848,22 +853,33 @@ public class Main extends Application {
 							    x.setAutoRanging(false);
 							    y.setAutoRanging(true);
 							    
+							    System.out.println("CALENDAR");
 							    // Update the bounds using the datetimepicker valies
 							    Calendar cal = Calendar.getInstance();
 							    // Get the "from" date
-							    cal.set(s.getYear(), s.getMonthValue(), s.getDayOfMonth(), s.getHour(), s.getMinute(), s.getSecond());
+							    // For some reason Calendar months are indexed from 0
+							    cal.set(s.getYear(), s.getMonthValue() - 1, s.getDayOfMonth(), s.getHour(), s.getMinute(), s.getSecond());
+							    System.out.println(cal);
 							    cal.set(Calendar.MILLISECOND, s.getNano()*1000);
 							    Date start = cal.getTime();
+							    System.out.println("Start: " + start);
 							    // Get the "to" date
-							    cal.set(e.getYear(), e.getMonthValue(), e.getDayOfMonth(), e.getHour(), e.getMinute(), e.getSecond());
+							    cal.set(e.getYear(), e.getMonthValue() - 1, e.getDayOfMonth(), e.getHour(), e.getMinute(), e.getSecond());
 							    cal.set(Calendar.MILLISECOND, e.getNano()*1000);
 								Date end = cal.getTime();
+								System.out.println("End: " + end);
 								// Set the bounds
 								x.setUpperBound(end);
 								x.setLowerBound(start);
+								
+								System.out.println("Lower Bound: " + x.getLowerBound());
+								System.out.println("Upper Bound: " + x.getUpperBound());
+								
+								// Update the eph label
+								ephNightText.get(n).setText("Events Per Hour: " + calculateEPH(start, end));
 							    
 								// Create a new chart
-				  	        	LineChart<Date, Number> charts = new LineChart<Date, Number>(x, y);
+				  	        	LineChartWithMarkers charts = new LineChartWithMarkers(x, y);
 				  	        	
 							    // Set chart title
 							    charts.setTitle("Night " + (n + 1));
@@ -877,7 +893,7 @@ public class Main extends Application {
 							    charts.setAnimated(false);
 	
 						        // Add a series based off the data
-							    charts.getData().add(new LineChart.Series<Date, Number>(data));
+							    charts.setData(chart.getData());
 						   	    // Change the cursor to a crosshair when on the chart
 							    charts.setCursor(Cursor.CROSSHAIR);	
 							    // Bring the chart to the front of the scene
@@ -899,7 +915,8 @@ public class Main extends Application {
 			  	        grid.add(nightText.get(night), 0, night + 1);
 			  	        grid.add(sleepTimes.get(night).get(0), 1, night + 1);
 			  	    	grid.add(sleepTimes.get(night).get(1), 2, night + 1);
-			  	    	grid.add(buttons.get(night), 3, night + 1);
+			  	    	grid.add(ephNightText.get(night), 3, night + 1);
+			  	    	grid.add(buttons.get(night), 4, night + 1);
 			  	    	
 			  	    	night++;
 						}
@@ -914,6 +931,30 @@ public class Main extends Application {
 	  	 reports.getItems().add(setSleep);
 	  	 //Setup Ctrl+P to activate setPLM
 	  	 setSleep.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
+	}
+	
+	/*
+	 * Calculate the events per hour for a given time period
+	 * @return the average events per hour
+	 */
+	private double calculateEPH(Date start, Date end) {
+		System.out.println("EPH CALCULATION");
+		System.out.println(start);
+		System.out.println(end);
+		// variable to hold the total amount of plms in the time period
+		double count = 0;
+		// the time difference between the two times in hours - note: getTime() returns ms
+		double hours = Math.abs(end.getTime() - start.getTime())/3600000;
+		System.out.println("Hours: " + hours);
+		
+		for (Movement m : mov) {
+			if (m!=null && m.getTime().getTime() > start.getTime() && m.getTime().getTime() < end.getTime()
+					&& m.getType().equals("P")) {
+				count++;
+			}
+		}
+		
+		return (hours != 0)? count/hours : 0.0;
 	}
 	  
 	 /**
@@ -956,7 +997,7 @@ public class Main extends Application {
 			                // Parse the values for the date
 			                event.set(Integer.parseInt(Character.toString(date.charAt(0)) + Character.toString(date.charAt(1))
 			                	+ Character.toString(date.charAt(2)) + Character.toString(date.charAt(3))),
-			                		Integer.parseInt(Character.toString(date.charAt(5)) + Character.toString(date.charAt(6))),
+			                		Integer.parseInt(Character.toString(date.charAt(5)) + Character.toString(date.charAt(6))) - 1,
 			                		Integer.parseInt(Character.toString(date.charAt(8)) + Character.toString(date.charAt(9))),
 			                		Integer.parseInt(Character.toString(date.charAt(11)) + Character.toString(date.charAt(12))),
 			                		Integer.parseInt(Character.toString(date.charAt(14)) + Character.toString(date.charAt(15))), 
@@ -1035,7 +1076,7 @@ public class Main extends Application {
 			                Calendar event = Calendar.getInstance();
 			                // Parse the values for the date
 			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
-			                		Integer.parseInt(value[5] + value[6]), Integer.parseInt(value[8] + value[9]),
+			                		Integer.parseInt(value[5] + value[6]) - 1, Integer.parseInt(value[8] + value[9]),
 			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
 			                		Integer.parseInt(value[17] + value[18]));
 			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
