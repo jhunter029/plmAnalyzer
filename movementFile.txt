@@ -1,3 +1,0 @@
-StartTimestamp, EventType, Str(g), Duration(s), Interval(s), IsLegDown, RejectionReason(String)
-2016-03-19 14:50:20.333,P,6.00,3.519,inf  ,1,
-2016-03-19 14:50:31.222,P,6.60,2.900,7.390,1,

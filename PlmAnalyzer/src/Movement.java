@@ -69,8 +69,12 @@ public class Movement {
 	   * @returns if the movement is from a leg down position
 	   * (<65 degrees from horizontal)
 	   */
-	  public boolean getDown() {
-		  return down;
+	  public String getDown() {
+		  if (down){
+		  	return "t";
+		  } else {
+			return "f";
+		  }
 	  }
 	  
 	  /*
@@ -118,7 +122,6 @@ public class Movement {
 	  @Override
 	  public int hashCode(){
 		  // I pretty much made this up.
-		  
 	      return ((11 * Objects.hashCode(time) + 13 * Objects.hashCode(str)
 	      	+ 3 * Objects.hashCode(type) + 5 * Objects.hashCode(dur)
 	      	+ 7 * Objects.hashCode(interval) + 23 * Objects.hashCode(down))
@@ -131,8 +134,9 @@ public class Movement {
 	   public String toString() {
 		   // Format for dates on x-axis
 		   SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-		   
-	       return String.format(dateFormat.format(time)+ ", " + type + ", " + str, ", " + dur + ", "
-	    		   + interval + ", " + down + ", " + reason);
+		   String inv = (this.getInterval() == Double.POSITIVE_INFINITY)?"inf ": String.format("%.3f", this.getInterval());
+		   String ret = String.format("%s,%s,%.2f,%.3f,%s,%s,%s", dateFormat.format(this.getTime()), 
+				   this.getType(), this.getStr(), this.getDur(), inv, this.getDown() , this.getReason());
+	       return ret;
 	   }
 }

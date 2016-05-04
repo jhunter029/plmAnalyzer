@@ -2,22 +2,23 @@
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
 		<item value="false" key="isRegEx"/>
-		<item value="X" key="selection"/>
-		<item value="true" key="casesensitive"/>
+		<item value="System.out.println" key="selection"/>
+		<item value="false" key="casesensitive"/>
 		<item value="false" key="incremental"/>
 		<item value="false" key="wrap"/>
-		<item value="true" key="wholeword"/>
+		<item value="false" key="wholeword"/>
 		<list key="findhistory">
+			<item value="remove"/>
+			<item value="System.out.println"/>
+			<item value="float"/>
+			<item value="skin"/>
+			<item value="value"/>
 			<item value="Date"/>
 			<item value="Y"/>
 			<item value="X"/>
-			<item value="Data"/>
-			<item value="popChart"/>
-			<item value="pop"/>
-			<item value="extract"/>
-			<item value="populate"/>
 		</list>
 		<list key="replacehistory">
+			<item value="date"/>
 			<item value="X"/>
 			<item value="Number"/>
 			<item value="Date"/>
@@ -25,7 +26,6 @@
 			<item value="chart"/>
 			<item value="value"/>
 			<item value=""/>
-			<item value="Calendar"/>
 		</list>
 	</section>
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
