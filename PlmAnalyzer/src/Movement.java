@@ -122,7 +122,6 @@ public class Movement {
 	  @Override
 	  public int hashCode(){
 		  // I pretty much made this up.
-		  
 	      return ((11 * Objects.hashCode(time) + 13 * Objects.hashCode(str)
 	      	+ 3 * Objects.hashCode(type) + 5 * Objects.hashCode(dur)
 	      	+ 7 * Objects.hashCode(interval) + 23 * Objects.hashCode(down))

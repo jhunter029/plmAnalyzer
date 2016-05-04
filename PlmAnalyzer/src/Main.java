@@ -58,7 +58,7 @@ import javafx.scene.layout.GridPane;
 
 /*
  * GUI for PLM Analyzer system
- * @version 2016_04_07
+ * @version 2016_05_04
  * @author Jennifer Hunter
  */
 @SuppressWarnings("restriction")
@@ -154,6 +154,8 @@ public class Main extends Application {
 	   
 	    
 	    // Set initial value of average to zero
+	    // Note: This was added as a framework for displaying a dynamic events per hour text
+	    // This is not displayed on the main GUI. Something simliar is seen in the Nightly Report section.
 	    eph.set(0.0);
 	    Text ephText = new Text();
 	    eph.addListener(new ChangeListener(){
@@ -605,7 +607,7 @@ public class Main extends Application {
 	   * Initialize Menu Items for the paramSetup menu
 	   */
 	public void setupParamSetup() {  	 
-	  	 // Display Paramters
+	  	 // Display Parameters
 	  	 MenuItem disp = new MenuItem("Set Display Paramters");
 	  	 disp.setOnAction(new EventHandler<ActionEvent>() {
 	  	     @SuppressWarnings("unchecked")
@@ -935,6 +937,8 @@ public class Main extends Application {
 	
 	/*
 	 * Calculate the events per hour for a given time period
+	 * @param start The starting time for the time period
+	 * @param end The ending time for the time period
 	 * @return the average events per hour
 	 */
 	private double calculateEPH(Date start, Date end) {
@@ -1062,50 +1066,57 @@ public class Main extends Application {
 		            while((line = bufferedReader.readLine()) != null) {
 		                // YYYY-MM-DD hh:mm:ss.sss,E,strG,duraS,intvS,d,
 		                // 01234567890123456789012345678901234567890123456789012
-		            	String[] value = line.split("");
-		            	// Check if the first value is a number = not title/header
-		            	boolean ret = true;
-		                try {
-		                    Double.parseDouble(value[0]);
-	
-		                }catch (NumberFormatException e) {
-		                    ret = false;
-		                }
+		            	 String[] value = line.split(",");
+			             String date = value [0];
+
+			             // Check if the first value is a number = not title 
+			             boolean ret = true;
+			             try {
+			                 Double.parseDouble(Character.toString(date.charAt(0)));
+		
+			             }catch (Exception e) {
+			                 ret = false;
+			             }
 		                
 		            	if (ret) {
 			                Calendar event = Calendar.getInstance();
 			                // Parse the values for the date
-			                event.set(Integer.parseInt(value[0] + value[1] + value[2] + value[3]),
-			                		Integer.parseInt(value[5] + value[6]) - 1, Integer.parseInt(value[8] + value[9]),
-			                		Integer.parseInt(value[11] + value[12]), Integer.parseInt(value[14] + value[15]), 
-			                		Integer.parseInt(value[17] + value[18]));
-			                event.set(Calendar.MILLISECOND, Integer.parseInt(value[20] + value[21] + value[22]));
+			                event.set(Integer.parseInt(Character.toString(date.charAt(0)) + Character.toString(date.charAt(1))
+			                	+ Character.toString(date.charAt(2)) + Character.toString(date.charAt(3))),
+			                		Integer.parseInt(Character.toString(date.charAt(5)) + Character.toString(date.charAt(6))) - 1,
+			                		Integer.parseInt(Character.toString(date.charAt(8)) + Character.toString(date.charAt(9))),
+			                		Integer.parseInt(Character.toString(date.charAt(11)) + Character.toString(date.charAt(12))),
+			                		Integer.parseInt(Character.toString(date.charAt(14)) + Character.toString(date.charAt(15))), 
+			                		Integer.parseInt(Character.toString(date.charAt(17)) + Character.toString(date.charAt(18))));
+			                event.set(Calendar.MILLISECOND, Integer.parseInt(Character.toString(date.charAt(20))
+			                		+ Character.toString(date.charAt(21)) + Character.toString(date.charAt(22))));
 			                // Parse the event type
-			                String eType = value[24];
+			                String eType = value[1].trim();
 			                // Parse the strength
-			                double str = Double.parseDouble(value[26] + value[27] + value[28] +  value[29]);
+			                double str = Double.parseDouble(value[2].trim());
 			                // Parse the duration
-			                double dur = Double.parseDouble(value[31] + value[32] + value[33] +  value[34] + value[35]);
+			                double dur = Double.parseDouble(value[3].trim());
 			                // Parse the interval - if text is nan, interval = positive infinity
 			                double inv = Double.POSITIVE_INFINITY;
 			                try {
-			                	inv = Double.parseDouble((value[37] + value[38] + value[39] +  value[40] + value[41]).trim());
+			                	inv = Double.parseDouble((value[4]).trim());
 			                } catch (NumberFormatException nfe) {}
 			                
 			                // Parse if the leg is down or up - default true
 			                boolean leg = true;
-			                if (value[43].equals("f")) {
+			                if (value[5].trim().toLowerCase().equals("f")) {
 			                	leg = false;
 			                }
 			                // Parse the reason for rejection
 			                String reason = "";
-			                if (value.length > 45) {
-				                for (int i = 45; i < value.length; i++) {
-				                	reason += value[i];
-				                }
-			                }
+			                try{
+			                     reason = value[6];
+			                } catch (Exception e) {}
+			              
 			                // Create a movement with the values and add to the list
-			                mov.add(new Movement(event.getTime(), eType, str, dur, inv, leg, reason));
+			                Movement m = new Movement(event.getTime(), eType, str, dur, inv, leg, reason);
+			                System.out.println(m);
+			                mov.add(m);
 			            }   
 		            }
 	            } catch (Exception e) {
@@ -1113,7 +1124,7 @@ public class Main extends Application {
 	            	alert.setTitle("Error: Open File Error");
 	            	alert.setHeaderText("Open File Error");
 	            	alert.setContentText("The data file you attempted to open was of the wrong type or was misformatted."
-	            			+ "\nPlease check your file and try again.");
+	            			+ "\nPlease check your file and try again.\nError: " + e.getMessage());
 
 	            	alert.showAndWait();
 	            }
@@ -1130,7 +1141,9 @@ public class Main extends Application {
 	      }
 	  }
 
-	  /** @return plotted y values for monotonically increasing integer x values, starting from x=1 */
+	  /** 
+	   * @return plotted y values for monotonically increasing integer x values, starting from x=1
+	   * */
 	  public ObservableList<XYChart.Data<Date, Number>> plot() {
 	    final ObservableList<XYChart.Data<Date, Number>> dataset = FXCollections.observableArrayList();
 	    // For each movement in the list add a node
